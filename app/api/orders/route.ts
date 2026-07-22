@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { Prisma } from '@prisma/client'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ensureOrderNumberForOrder } from '@/lib/orderNumber'
@@ -67,10 +68,10 @@ export async function POST(req: NextRequest) {
     const patientId = typeof body.patientId === 'string' ? body.patientId : null
     const providerNotes = typeof body.providerNotes === 'string' ? body.providerNotes.trim() : null
     const rxNumber = typeof body.rxNumber === 'string' ? body.rxNumber.trim() : null
-    const rawMedicationIds = Array.isArray(body.medicationIds)
-      ? body.medicationIds.filter((id: unknown) => typeof id === 'string' && id.trim())
+    const rawMedicationIds: string[] = Array.isArray(body.medicationIds)
+      ? body.medicationIds.filter((id: unknown): id is string => typeof id === 'string' && id.trim().length > 0)
       : []
-    const medicationIds = [...new Set(rawMedicationIds)].slice(0, 2)
+    const medicationIds: string[] = Array.from(new Set<string>(rawMedicationIds)).slice(0, 2)
 
     if (!patientId) {
       return NextResponse.json({ error: 'Patient is required.' }, { status: 400 })
@@ -124,12 +125,12 @@ export async function POST(req: NextRequest) {
     }
 
     const createOrder = async (includeOrderNumber: boolean) => {
-      const orderData: Record<string, unknown> = {
+      const orderData: Prisma.OrderCreateInput = {
         status: 'PRESCRIBED',
-        patientId,
-        providerId,
-        pharmacyId,
-        medicationId: medicationIds[0],
+        patient: { connect: { id: patientId } },
+        provider: { connect: { id: providerId } },
+        pharmacy: { connect: { id: pharmacyId } },
+        medication: { connect: { id: medicationIds[0] } },
         providerNotes: providerNotes || null,
         rxNumber: rxNumber || null,
         paymentState: 'UNPAID',

@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}))
-  const medicationIds = Array.isArray(body?.medicationIds)
-    ? [...new Set(body.medicationIds.filter((id: unknown): id is string => typeof id === 'string' && id.trim()))].slice(0, 2)
+  const medicationIds: string[] = Array.isArray(body?.medicationIds)
+    ? Array.from(new Set<string>(body.medicationIds.filter((id: unknown): id is string => typeof id === 'string' && id.trim().length > 0))).slice(0, 2)
     : []
 
   if (medicationIds.length === 0) {

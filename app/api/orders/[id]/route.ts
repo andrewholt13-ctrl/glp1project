@@ -157,9 +157,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const body = await req.json()
   const rawFinalMedicationIds = Array.isArray(body.finalMedicationIds)
-    ? body.finalMedicationIds.filter((id: unknown) => typeof id === 'string' && id.trim())
+    ? body.finalMedicationIds.filter((id: unknown): id is string => typeof id === 'string' && id.trim().length > 0)
     : null
-  const finalMedicationIds = rawFinalMedicationIds ? [...new Set(rawFinalMedicationIds)].slice(0, 2) : null
+  const finalMedicationIds = rawFinalMedicationIds ? Array.from(new Set<string>(rawFinalMedicationIds)).slice(0, 2) : null
 
   const isOverride = typeof body.overrideStatus === 'string'
   const requestedStatus = isOverride ? body.overrideStatus : body.status

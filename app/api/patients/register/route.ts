@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     const provider = selectedProvider ?? (await prisma.provider.findFirst({ where: { isActive: true } }))
 
     const normalizedMedicationIds = Array.isArray(medicationIds)
-      ? [...new Set(medicationIds.filter((id: unknown): id is string => typeof id === 'string' && id.trim()))].slice(0, 2)
+      ? Array.from(new Set(medicationIds.filter((id: unknown): id is string => typeof id === 'string' && id.trim().length > 0))).slice(0, 2)
       : []
 
     const validMedications = normalizedMedicationIds.length
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     }))
 
     const createUserWithOrder = async (includeOrderNumber: boolean) => {
-      const orderCreateData: Record<string, unknown> = {
+      const orderCreateData: any = {
         status: 'INTAKE_PENDING',
         // Patient medication picks are recommendations; provider sets final prescription later.
         medicationId: null,

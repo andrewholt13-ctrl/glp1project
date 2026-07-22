@@ -12,8 +12,8 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json()
   const singleOrderId = typeof body.orderId === 'string' ? body.orderId : null
-  const fromArray = Array.isArray(body.orderIds) ? body.orderIds.filter((id: unknown) => typeof id === 'string' && id.trim()) : []
-  const requestedOrderIds = [...new Set([...(singleOrderId ? [singleOrderId] : []), ...fromArray])]
+  const fromArray = Array.isArray(body.orderIds) ? body.orderIds.filter((id: unknown): id is string => typeof id === 'string' && id.trim().length > 0) : []
+  const requestedOrderIds = Array.from(new Set([...(singleOrderId ? [singleOrderId] : []), ...fromArray]))
 
   if (requestedOrderIds.length === 0) {
     logApiEvent('warn', 'stripe.checkout.invalid_request', { requestId, actorRole: session.user.role })

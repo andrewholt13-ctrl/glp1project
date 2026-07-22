@@ -83,7 +83,6 @@ export async function POST(req: NextRequest) {
           updatedOrderCount: updatedCount,
         })
       })
-      }
     }
   }
 

@@ -99,8 +99,8 @@ export default function MedicationsPage() {
                       }
 
                       if (res.ok && data.handoutUrl) {
-                        setForm(f => ({ ...f, handoutUrl: data.handoutUrl }))
-                        setEditing({ ...editing, handoutUrl: data.handoutUrl })
+                        setForm(f => ({ ...f, handoutUrl: data.handoutUrl ?? '' }))
+                        setEditing({ ...editing, handoutUrl: data.handoutUrl ?? '' })
                         setHandoutFile(null)
                         setUploadError(null)
                         load()
