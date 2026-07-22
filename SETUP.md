@@ -34,6 +34,7 @@ NEXTAUTH_URL="http://localhost:3000"
 STRIPE_SECRET_KEY="sk_test_..."
 STRIPE_WEBHOOK_SECRET="whsec_..."
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
+HEALTHCHECK_TOKEN="choose-a-long-random-token"
 ```
 
 Get your Stripe keys from: https://dashboard.stripe.com/apikeys
@@ -119,6 +120,17 @@ Generate a QR code for `http://yourdomain.com/?ref=YOURCODE` using any QR genera
 6. Deploy
 
 For production Postgres, run: `npx prisma migrate deploy`
+
+### Production Health Check
+
+- Public status endpoint: `/api/health`
+- Detailed status (includes latency metrics):
+
+```bash
+curl -H "Authorization: Bearer $HEALTHCHECK_TOKEN" https://your-domain.com/api/health
+```
+
+If `HEALTHCHECK_TOKEN` is not set, only the public minimal status payload is returned.
 
 ---
 
