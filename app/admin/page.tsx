@@ -10,17 +10,24 @@ export default function AdminOverview() {
   const [stats, setStats] = useState<Stats>({ total: 0, pending: 0, prescribed: 0, shipped: 0, completed: 0, revenue: 0 })
 
   useEffect(() => {
-    fetch('/api/orders').then(r => r.json()).then((data: any[]) => {
-      setOrders(data)
-      setStats({
-        total: data.length,
-        pending: data.filter(o => ['INTAKE_PENDING', 'PROVIDER_REVIEW'].includes(o.status)).length,
-        prescribed: data.filter(o => o.status === 'PRESCRIBED').length,
-        shipped: data.filter(o => o.status === 'SHIPPED').length,
-        completed: data.filter(o => o.status === 'COMPLETED').length,
-        revenue: data.reduce((sum, o) => sum + (o.amountPaid ?? 0), 0),
+    fetch('/api/orders')
+      .then((r) => r.json())
+      .then((payload: unknown) => {
+        const data = Array.isArray(payload) ? payload : []
+        setOrders(data)
+        setStats({
+          total: data.length,
+          pending: data.filter(o => ['INTAKE_PENDING', 'PROVIDER_REVIEW'].includes(o.status)).length,
+          prescribed: data.filter(o => o.status === 'PRESCRIBED').length,
+          shipped: data.filter(o => o.status === 'SHIPPED').length,
+          completed: data.filter(o => o.status === 'COMPLETED').length,
+          revenue: data.reduce((sum, o) => sum + (o.amountPaid ?? 0), 0),
+        })
       })
-    })
+      .catch(() => {
+        setOrders([])
+        setStats({ total: 0, pending: 0, prescribed: 0, shipped: 0, completed: 0, revenue: 0 })
+      })
   }, [])
 
   const STATUS_BADGE: Record<string, string> = {
