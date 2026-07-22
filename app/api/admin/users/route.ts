@@ -1,9 +1,19 @@
+export const dynamic = 'force-dynamic'
+
+
+
+
+
+
+
+
+
+
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { requireApiRole } from '@/lib/apiAuth'
 
-export const dynamic = 'force-dynamic'
 
 function isLegacyUserSchemaError(err: unknown) {
   const message = err instanceof Error ? err.message : String(err)

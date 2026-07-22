@@ -1,3 +1,14 @@
+export const dynamic = 'force-dynamic'
+
+
+
+
+
+
+
+
+
+
 import { NextRequest, NextResponse } from 'next/server'
 import { randomBytes, createHash } from 'crypto'
 import { prisma } from '@/lib/prisma'

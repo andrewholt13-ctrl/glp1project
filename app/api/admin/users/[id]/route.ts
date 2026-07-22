@@ -1,9 +1,24 @@
+export const dynamic = 'force-dynamic'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { requireApiRole } from '@/lib/apiAuth'
 
-export const dynamic = 'force-dynamic'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireApiRole(['MASTER_ADMIN'])
