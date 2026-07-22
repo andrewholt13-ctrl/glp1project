@@ -1,0 +1,231 @@
+// This is your Prisma schema file
+// datasource: SQLite for local dev, swap to postgresql for production
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  mustResetPassword Boolean @default(false)
+  passwordResetTokenHash String?
+  passwordResetExpiresAt DateTime?
+  role          String
+  name          String
+  phone         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Role-specific relations
+  providerProfile    Provider?
+  patientProfile     Patient?
+  influencerProfile  Influencer?
+  pharmacyProfile    Pharmacy?
+  auditLogs          AuditLog[]
+  supportTickets     SupportTicket[]
+  supportMessages    SupportMessage[]
+}
+
+model Provider {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id])
+  npiNumber     String?
+  licenseNumber String?
+  specialty     String?
+  bio           String?
+  isActive      Boolean  @default(true)
+  orders        Order[]
+  createdAt     DateTime @default(now())
+}
+
+model Patient {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+  dateOfBirth    String?
+  address        String?
+  city           String?
+  state          String?
+  zip            String?
+  weight         String?
+  height         String?
+  allergies      String?
+  pcpSeen        Boolean?
+  heartConditions String?
+  endocrineConditions String?
+  cancerHistory  String?
+  diabetesStatus String?
+  giConditions   String?
+  currentMeds    String?
+  medicalHistory String?
+  referredBy     String?   // influencer code
+  orders         Order[]
+  createdAt      DateTime  @default(now())
+}
+
+model Influencer {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  code        String   @unique  // unique referral code / QR code slug
+  commissionRate Float  @default(0)  // flat $ per completed order
+  isActive    Boolean  @default(true)
+  orders      Order[]
+  createdAt   DateTime @default(now())
+}
+
+model Pharmacy {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  address     String?
+  phone       String?
+  licenseNum  String?
+  isActive    Boolean  @default(true)
+  orders      Order[]
+  createdAt   DateTime @default(now())
+}
+
+model Medication {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  directions   String?  // dosage instructions
+  quantity     String?  // e.g., "30 units", "4 pens"
+  price        Float    // in dollars
+  handoutUrl   String?
+  isActive     Boolean  @default(true)
+  orders       Order[]
+  orderMedications OrderMedication[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String?     @unique
+  status        String      @default("INTAKE_PENDING")
+
+  patientId     String
+  patient       Patient     @relation(fields: [patientId], references: [id])
+
+  medicationId  String?
+  medication    Medication? @relation(fields: [medicationId], references: [id])
+
+  providerId    String?
+  provider      Provider?   @relation(fields: [providerId], references: [id])
+
+  pharmacyId    String?
+  pharmacy      Pharmacy?   @relation(fields: [pharmacyId], references: [id])
+
+  influencerId  String?
+  influencer    Influencer? @relation(fields: [influencerId], references: [id])
+
+  orderMedications OrderMedication[]
+
+  // Payment
+  stripePaymentIntentId String?
+  amountPaid    Float?
+  paidAt        DateTime?
+  paymentState  String    @default("UNPAID")
+  paymentStateReason String?
+
+  // Provider notes
+  providerNotes String?
+  patientNotes  String?
+  pharmacyNotes String?
+  rxNumber      String?
+
+  // Pharmacy tracking
+  trackingNumber String?
+
+  // Influencer commission
+  commissionPaid Float?
+  commissionPaidAt DateTime?
+
+  notes         String?
+  auditLogs      AuditLog[]
+  supportTickets SupportTicket[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  entityType  String
+  entityId    String
+  actorRole   String
+  actorId     String?
+  actor       User?    @relation(fields: [actorId], references: [id])
+  orderId     String?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  beforeValue String?
+  afterValue  String?
+  reason      String?
+  metadata    String?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+  @@index([orderId, createdAt])
+}
+
+model OrderMedication {
+  id           String      @id @default(cuid())
+  order        Order       @relation(fields: [orderId], references: [id])
+  orderId      String
+  medication   Medication  @relation(fields: [medicationId], references: [id])
+  medicationId String
+  createdAt    DateTime    @default(now())
+
+  @@unique([orderId, medicationId])
+}
+
+model AppSettings {
+  id               String @id @default("singleton")
+  outOfStateUrl    String @default("https://example.com/other-states")
+  platformName     String @default("GLP-1 Wellness")
+  supportEmail     String @default("support@example.com")
+  defaultPharmacyId String?
+  updatedAt        DateTime @updatedAt
+}
+
+model SupportTicket {
+  id            String           @id @default(cuid())
+  ticketNumber  String           @unique
+  type          String
+  subject       String
+  status        String           @default("OPEN")
+  orderId       String?
+  order         Order?           @relation(fields: [orderId], references: [id])
+  orderNumber   String?
+  createdById   String?
+  createdBy     User?            @relation(fields: [createdById], references: [id])
+  name          String
+  email         String
+  messages      SupportMessage[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([orderId, createdAt])
+}
+
+model SupportMessage {
+  id         String         @id @default(cuid())
+  ticket     SupportTicket  @relation(fields: [ticketId], references: [id])
+  ticketId   String
+  authorId   String?
+  author     User?          @relation(fields: [authorId], references: [id])
+  authorRole String
+  body       String
+  createdAt  DateTime       @default(now())
+}
