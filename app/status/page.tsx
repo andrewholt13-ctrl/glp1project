@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { getOrderRef } from '@/lib/orderRef'
+import { isPrescriptionExpired } from '@/lib/prescriptionMeta'
 
 type OrderStatus =
   | 'INTAKE_PENDING'
@@ -36,6 +37,16 @@ type Order = {
   amountPaid: number | null
   paidAt: string | null
   paymentState: 'UNPAID' | 'PAID' | 'REFUNDED' | 'VOIDED'
+  prescriptionMeta?: {
+    quantity: string
+    refillsTotal: number
+    refillsRemaining: number
+    writtenDate: string
+    prescribedAt: string
+    expiresAt: string
+    isDiscontinued: boolean
+    discontinueReason: string | null
+  } | null
 }
 
 const STATUS_STEPS: OrderStatus[] = [
@@ -283,6 +294,12 @@ export default function StatusPage() {
                 <div className="text-sm space-y-1">
                   <div className="flex justify-between"><span className="text-gray-500">Prescribed</span><span className="font-medium">{order.medication.name}</span></div>
                   <div className="flex justify-between"><span className="text-gray-500">Quantity</span><span className="font-medium">{order.medication.quantity}</span></div>
+                  {order.prescriptionMeta && (
+                    <>
+                      <div className="flex justify-between"><span className="text-gray-500">Refills Remaining</span><span className="font-medium">{order.prescriptionMeta.refillsRemaining} / {order.prescriptionMeta.refillsTotal}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500">Prescription Expires</span><span className="font-medium">{new Date(order.prescriptionMeta.expiresAt).toLocaleDateString()}</span></div>
+                    </>
+                  )}
                   {order.rxNumber && <div className="flex justify-between"><span className="text-gray-500">Rx #</span><span className="font-mono font-medium">{order.rxNumber}</span></div>}
                   {order.trackingNumber && <div className="flex justify-between"><span className="text-gray-500">Tracking</span><span className="font-mono font-medium">{order.trackingNumber}</span></div>}
                   <div className="mt-3 rounded-lg bg-gray-50 p-3 text-xs text-gray-600"><strong>Directions:</strong> {order.medication.directions}</div>
@@ -357,10 +374,23 @@ export default function StatusPage() {
                         {pastOrder.trackingNumber && (
                           <div className="text-gray-600">Tracking: <span className="font-mono">{pastOrder.trackingNumber}</span></div>
                         )}
+                        {pastOrder.prescriptionMeta && (
+                          <div className="text-xs text-gray-600">
+                            Refills remaining: <span className="font-semibold">{pastOrder.prescriptionMeta.refillsRemaining}</span> / {pastOrder.prescriptionMeta.refillsTotal}
+                          </div>
+                        )}
+                        {pastOrder.prescriptionMeta && isPrescriptionExpired(pastOrder.prescriptionMeta) && (
+                          <div className="rounded bg-red-50 px-2 py-1 text-xs text-red-700 ring-1 ring-red-200">Refills are expired.</div>
+                        )}
                         <button
                           className="btn-primary"
                           onClick={() => requestRefill(pastOrder.id)}
-                          disabled={requestingRefillFor === pastOrder.id}
+                          disabled={
+                            requestingRefillFor === pastOrder.id ||
+                            !pastOrder.prescriptionMeta ||
+                            pastOrder.prescriptionMeta.refillsRemaining <= 0 ||
+                            isPrescriptionExpired(pastOrder.prescriptionMeta)
+                          }
                         >
                           {requestingRefillFor === pastOrder.id ? 'Requesting…' : 'Request Refill'}
                         </button>
@@ -386,6 +416,26 @@ export default function StatusPage() {
                         {pastOrder.trackingNumber && (
                           <div className="mt-1 text-xs text-gray-600">Tracking: <span className="font-mono">{pastOrder.trackingNumber}</span></div>
                         )}
+                        {pastOrder.prescriptionMeta && (
+                          <div className="mt-1 text-xs text-gray-600">
+                            Refills remaining: <span className="font-semibold">{pastOrder.prescriptionMeta.refillsRemaining}</span> / {pastOrder.prescriptionMeta.refillsTotal}
+                          </div>
+                        )}
+                        {pastOrder.prescriptionMeta && isPrescriptionExpired(pastOrder.prescriptionMeta) && (
+                          <div className="mt-2 rounded bg-red-50 px-2 py-1 text-xs text-red-700 ring-1 ring-red-200">Refills are expired.</div>
+                        )}
+                        <button
+                          className="btn-primary mt-3"
+                          onClick={() => requestRefill(pastOrder.id)}
+                          disabled={
+                            requestingRefillFor === pastOrder.id ||
+                            !pastOrder.prescriptionMeta ||
+                            pastOrder.prescriptionMeta.refillsRemaining <= 0 ||
+                            isPrescriptionExpired(pastOrder.prescriptionMeta)
+                          }
+                        >
+                          {requestingRefillFor === pastOrder.id ? 'Requesting…' : 'Request Refill'}
+                        </button>
                       </div>
                     ))}
                   </div>

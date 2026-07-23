@@ -19,6 +19,13 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateOrderNumber } from '@/lib/orderNumber'
+import {
+  decrementRefill,
+  discontinueExpiredPrescription,
+  isPrescriptionExpired,
+  parsePrescriptionMeta,
+  upsertPrescriptionMeta,
+} from '@/lib/prescriptionMeta'
 
 export async function POST(_: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
@@ -48,6 +55,27 @@ export async function POST(_: NextRequest, { params }: { params: { id: string } 
 
   if (!['SHIPPED', 'COMPLETED'].includes(sourceOrder.status)) {
     return NextResponse.json({ error: 'Refills can only be requested for shipped/completed orders.' }, { status: 400 })
+  }
+
+  const sourceMeta = parsePrescriptionMeta(sourceOrder.notes)
+  if (!sourceMeta) {
+    return NextResponse.json({ error: 'Refill metadata is missing for this prescription. Please contact support.' }, { status: 400 })
+  }
+
+  if (isPrescriptionExpired(sourceMeta)) {
+    const expiredMeta = discontinueExpiredPrescription(sourceMeta)
+    await prisma.order.update({
+      where: { id: sourceOrder.id },
+      data: {
+        status: 'CANCELLED',
+        notes: upsertPrescriptionMeta(sourceOrder.notes, expiredMeta),
+      },
+    })
+    return NextResponse.json({ error: 'Refills are expired for this prescription.' }, { status: 400 })
+  }
+
+  if (sourceMeta.refillsRemaining <= 0) {
+    return NextResponse.json({ error: 'No refills remaining on this prescription.' }, { status: 400 })
   }
 
   const existingOpenRefill = await prisma.order.findFirst({
@@ -92,26 +120,40 @@ export async function POST(_: NextRequest, { params }: { params: { id: string } 
     },
   }
 
-  let refillOrder
-  try {
-    const orderNumber = await generateOrderNumber()
-    refillOrder = await prisma.order.create({
+  const decrementedMeta = decrementRefill(sourceMeta)
+
+  const refillOrder = await prisma.$transaction(async (tx) => {
+    let created
+    try {
+      const orderNumber = await generateOrderNumber()
+      created = await tx.order.create({
+        data: {
+          ...createBaseData,
+          orderNumber,
+        },
+        select: { id: true, status: true, orderNumber: true },
+      })
+    } catch {
+      created = await tx.order.create({
+        data: createBaseData,
+        select: { id: true, status: true, orderNumber: true },
+      })
+    }
+
+    await tx.order.update({
+      where: { id: sourceOrder.id },
       data: {
-        ...createBaseData,
-        orderNumber,
+        notes: upsertPrescriptionMeta(sourceOrder.notes, decrementedMeta),
       },
-      select: { id: true, status: true, orderNumber: true },
     })
-  } catch {
-    refillOrder = await prisma.order.create({
-      data: createBaseData,
-      select: { id: true, status: true },
-    })
-  }
+
+    return created
+  })
 
   return NextResponse.json({
-    message: 'Refill request sent to pharmacy queue.',
+    message: `Refill request sent to pharmacy queue. Refills remaining: ${decrementedMeta.refillsRemaining}.`,
     orderId: refillOrder.id,
     status: refillOrder.status,
+    refillsRemaining: decrementedMeta.refillsRemaining,
   })
 }

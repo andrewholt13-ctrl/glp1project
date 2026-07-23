@@ -12,6 +12,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ensureOrderNumberForOrder } from '@/lib/orderNumber'
 import { generateOrderNumber } from '@/lib/orderNumber'
+import { discontinueExpiredPrescription, isPrescriptionExpired, parsePrescriptionMeta, upsertPrescriptionMeta } from '@/lib/prescriptionMeta'
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -65,12 +66,31 @@ export async function GET(req: NextRequest) {
   })
 
   for (const order of orders) {
+    const meta = parsePrescriptionMeta(order.notes)
+    if (meta && isPrescriptionExpired(meta) && order.status !== 'CANCELLED') {
+      const expiredMeta = discontinueExpiredPrescription(meta)
+      const nextNotes = upsertPrescriptionMeta(order.notes, expiredMeta)
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { status: 'CANCELLED', notes: nextNotes },
+      })
+      order.status = 'CANCELLED'
+      order.notes = nextNotes
+    }
+  }
+
+  for (const order of orders) {
     if (!order.orderNumber) {
       order.orderNumber = await ensureOrderNumberForOrder(order.id)
     }
   }
 
-  return NextResponse.json(orders)
+  return NextResponse.json(
+    orders.map((order) => ({
+      ...order,
+      prescriptionMeta: parsePrescriptionMeta(order.notes),
+    }))
+  )
 }
 
 export async function POST(req: NextRequest) {

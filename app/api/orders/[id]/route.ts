@@ -16,6 +16,7 @@ import { ensureOrderNumberForOrder } from '@/lib/orderNumber'
 import { requireApiRole, requireApiSession } from '@/lib/apiAuth'
 import { getRequestId, logApiEvent } from '@/lib/apiLogging'
 import { writeAuditLog } from '@/lib/auditLog'
+import { createPrescriptionMeta, parsePrescriptionMeta, upsertPrescriptionMeta } from '@/lib/prescriptionMeta'
 
 type AllowedStatus =
   | 'INTAKE_PENDING'
@@ -179,6 +180,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const paymentStateReason = typeof body.paymentStateReason === 'string' ? body.paymentStateReason.trim() : ''
   const providerIdInput = typeof body.providerId === 'string' ? body.providerId.trim() : null
   const pharmacyIdInput = typeof body.pharmacyId === 'string' ? body.pharmacyId.trim() : null
+  const prescriptionQuantityInput = typeof body.prescriptionQuantity === 'string' ? body.prescriptionQuantity.trim() : null
+  const prescriptionRefillsInput = Number(body.prescriptionRefills)
+  const prescriptionWrittenDateInput = typeof body.prescriptionWrittenDate === 'string' ? body.prescriptionWrittenDate.trim() : null
 
   let nextStatus: AllowedStatus | null = null
   if (requestedStatus != null) {
@@ -334,6 +338,34 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
   if (finalMedicationIds && finalMedicationIds.length > 0) updateData.medicationId = finalMedicationIds[0]
 
+  const fallbackMedication = await prisma.medication.findFirst({
+    where: { id: selectedMedicationIds[0] },
+    select: { quantity: true },
+  })
+  const priorMeta = parsePrescriptionMeta(existing.notes)
+  const effectiveQuantity = prescriptionQuantityInput ?? priorMeta?.quantity ?? fallbackMedication?.quantity ?? ''
+  const effectiveRefills = Number.isFinite(prescriptionRefillsInput)
+    ? Math.max(0, Math.min(99, Math.floor(prescriptionRefillsInput)))
+    : (priorMeta?.refillsRemaining ?? 0)
+  const shouldSetPrescriptionMeta =
+    nextStatus === 'PRESCRIBED' &&
+    (
+      existing.status !== 'PRESCRIBED' ||
+      prescriptionQuantityInput != null ||
+      Number.isFinite(prescriptionRefillsInput) ||
+      prescriptionWrittenDateInput != null
+    )
+
+  if (shouldSetPrescriptionMeta) {
+    const nextMeta = createPrescriptionMeta({
+      quantity: effectiveQuantity,
+      refillCount: effectiveRefills,
+      prescribedAt: priorMeta?.prescribedAt ?? new Date().toISOString(),
+      writtenDate: prescriptionWrittenDateInput ?? priorMeta?.writtenDate ?? undefined,
+    })
+    updateData.notes = upsertPrescriptionMeta((typeof updateData.notes === 'string' ? updateData.notes : existing.notes) ?? null, nextMeta)
+  }
+
   const beforeSnapshot = JSON.stringify({
     status: existing.status,
     medicationId: existing.medicationId,
@@ -342,6 +374,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     providerNotes: existing.providerNotes,
     patientNotes: existing.patientNotes,
     pharmacyNotes: existing.pharmacyNotes,
+    notes: existing.notes,
     amountPaid: existing.amountPaid,
     paidAt: existing.paidAt,
     paymentState: existing.paymentState,
@@ -380,6 +413,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           providerNotes: order.providerNotes,
           patientNotes: order.patientNotes,
           pharmacyNotes: order.pharmacyNotes,
+          notes: order.notes,
           amountPaid: order.amountPaid,
           paidAt: order.paidAt,
           paymentState: order.paymentState,

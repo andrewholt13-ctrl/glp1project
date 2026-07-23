@@ -2,12 +2,23 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { getOrderRef } from '@/lib/orderRef'
+import { isPrescriptionExpired } from '@/lib/prescriptionMeta'
 
 type Order = {
   id: string; orderNumber: string | null; status: string; createdAt: string; rxNumber: string | null; trackingNumber: string | null
   providerNotes: string | null; patientNotes: string | null; pharmacyNotes: string | null
   amountPaid: number | null
   paymentState: 'UNPAID' | 'PAID' | 'REFUNDED' | 'VOIDED'
+  prescriptionMeta?: {
+    quantity: string
+    refillsTotal: number
+    refillsRemaining: number
+    writtenDate: string
+    prescribedAt: string
+    expiresAt: string
+    isDiscontinued: boolean
+    discontinueReason: string | null
+  } | null
   medication: { name: string; directions: string; quantity: string } | null
   patient: {
     address: string | null; city: string | null; state: string | null; zip: string | null
@@ -284,6 +295,11 @@ export default function PharmacyDashboard() {
                     <div>
                       <div className="font-medium text-sm">{o.patient?.user?.name}</div>
                       <div className="text-xs text-gray-500">Order: {getOrderRef(o.orderNumber, o.id)}</div>
+                      {o.prescriptionMeta && (
+                        <div className="text-xs text-gray-500">
+                          Refills: {o.prescriptionMeta.refillsRemaining}/{o.prescriptionMeta.refillsTotal}
+                        </div>
+                      )}
                       <div className="text-xs text-gray-400">{o.medication?.name ?? '—'}</div>
                       {o.rxNumber && <div className="text-xs font-mono text-brand-600">Rx: {o.rxNumber}</div>}
                     </div>
@@ -381,6 +397,12 @@ export default function PharmacyDashboard() {
                 <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
                   <div className="font-medium">{selected.medication.name}</div>
                   <div className="text-gray-500">Qty: {selected.medication.quantity}</div>
+                  {selected.prescriptionMeta?.quantity && <div className="text-gray-500">Prescribed Qty Override: {selected.prescriptionMeta.quantity}</div>}
+                  {selected.prescriptionMeta && <div className="text-gray-500">Refills Remaining: {selected.prescriptionMeta.refillsRemaining} / {selected.prescriptionMeta.refillsTotal}</div>}
+                  {selected.prescriptionMeta && <div className="text-gray-500">Rx Expires: {new Date(selected.prescriptionMeta.expiresAt).toLocaleDateString()}</div>}
+                  {selected.prescriptionMeta && isPrescriptionExpired(selected.prescriptionMeta) && (
+                    <div className="rounded bg-red-50 px-2 py-1 text-xs text-red-700 ring-1 ring-red-200">Refills are expired.</div>
+                  )}
                   <div className="text-gray-500">Directions: {selected.medication.directions}</div>
                   {selected.rxNumber && <div className="font-mono text-brand-600 text-xs">Rx# {selected.rxNumber}</div>}
                 </div>

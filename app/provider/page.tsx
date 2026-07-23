@@ -73,6 +73,16 @@ function joinPatientAddress(profile: PatientProfile) {
   return [profile.address, profile.city, profile.state, profile.zip].filter(Boolean).join(', ') || 'Not on file'
 }
 
+function formatShortDate(value: string) {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return 'Unknown date'
+  return parsed.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
 const BADGE: Record<string, string> = {
   INTAKE_PENDING:'badge-yellow',PROVIDER_REVIEW:'badge-blue',PRESCRIBED:'badge-green',
   PAID:'badge-green',REFILL_REQUESTED:'badge-yellow',PHARMACY_PENDING:'badge-yellow',SHIPPED:'badge-green',COMPLETED:'badge-green',CANCELLED:'badge-red',
@@ -106,6 +116,9 @@ export default function ProviderDashboard() {
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [viewMode, setViewMode] = useState<'create' | 'needsReview' | 'pastPatients'>('needsReview')
   const [pastPatientSearch, setPastPatientSearch] = useState('')
+  const [prescriptionQuantity, setPrescriptionQuantity] = useState('')
+  const [prescriptionRefills, setPrescriptionRefills] = useState('0')
+  const [prescriptionWrittenDate, setPrescriptionWrittenDate] = useState(new Date().toISOString().slice(0, 10))
   const [prescriptionDraft, setPrescriptionDraft] = useState<PrescriptionDraft | null>(null)
 
   const load = useCallback(async (focusOrderId?: string) => {
@@ -245,6 +258,9 @@ export default function ProviderDashboard() {
     setProviderNotes(o.providerNotes ?? '')
     setPatientNotes(o.patientNotes ?? '')
     setPharmacyNotes(o.pharmacyNotes ?? '')
+    setPrescriptionQuantity(o.orderMedications[0]?.medication.quantity ?? o.medication?.quantity ?? '')
+    setPrescriptionRefills('0')
+    setPrescriptionWrittenDate(new Date().toISOString().slice(0, 10))
     setOverrideStatus(o.status)
     setOverrideReason('')
   }
@@ -265,7 +281,16 @@ export default function ProviderDashboard() {
     const res = await fetch(`/api/orders/${selected.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'PRESCRIBED', providerNotes, patientNotes, pharmacyNotes, finalMedicationIds }),
+      body: JSON.stringify({
+        status: 'PRESCRIBED',
+        providerNotes,
+        patientNotes,
+        pharmacyNotes,
+        finalMedicationIds,
+        prescriptionQuantity,
+        prescriptionRefills: Number(prescriptionRefills),
+        prescriptionWrittenDate,
+      }),
     })
     const text = await res.text()
     let data: { error?: string } | null = null
@@ -293,9 +318,9 @@ export default function ProviderDashboard() {
         ? selectedMedicationDetails.map((med) => med.name).join(', ')
         : (selected.medication?.name ?? ''),
       directions: fallbackMedication?.directions ?? '',
-      quantity: fallbackMedication?.quantity ?? '',
-      refills: '0',
-      writtenDate: new Date().toISOString().slice(0, 10),
+      quantity: prescriptionQuantity || fallbackMedication?.quantity || '',
+      refills: prescriptionRefills,
+      writtenDate: prescriptionWrittenDate,
     })
 
     setSaving(false)
@@ -310,12 +335,24 @@ export default function ProviderDashboard() {
     })
   }
 
-  function downloadIntakeInfo() {
+  async function downloadIntakeInfo() {
     if (!prescriptionDraft) return
-    window.open(`/api/orders/${prescriptionDraft.orderId}/intake-export`, '_blank', 'noopener,noreferrer')
+    const res = await fetch(`/api/orders/${prescriptionDraft.orderId}/intake-export`)
+    if (!res.ok) {
+      const text = await res.text()
+      alert(text || 'Could not download intake info.')
+      return
+    }
+    const blob = await res.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = blobUrl
+    link.download = `intake-${prescriptionDraft.orderId.slice(0, 8)}.txt`
+    link.click()
+    URL.revokeObjectURL(blobUrl)
   }
 
-  function printPrescriptionPdf() {
+  async function printPrescriptionPdf() {
     if (!prescriptionDraft) return
     const params = new URLSearchParams({
       providerAddress: prescriptionDraft.providerAddress,
@@ -327,7 +364,22 @@ export default function ProviderDashboard() {
       refills: prescriptionDraft.refills,
       writtenDate: prescriptionDraft.writtenDate,
     })
-    window.open(`/api/orders/${prescriptionDraft.orderId}/prescription-pdf?${params.toString()}`, '_blank', 'noopener,noreferrer')
+    const res = await fetch(`/api/orders/${prescriptionDraft.orderId}/prescription-pdf?${params.toString()}`)
+    if (!res.ok) {
+      const text = await res.text()
+      alert(text || 'Could not generate prescription PDF.')
+      return
+    }
+    const blob = await res.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    const popup = window.open(blobUrl, '_blank', 'noopener,noreferrer')
+    if (!popup) {
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = `prescription-${prescriptionDraft.orderId.slice(0, 8)}.pdf`
+      link.click()
+    }
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 30000)
   }
 
   async function markReview(id: string) {
@@ -587,6 +639,7 @@ export default function ProviderDashboard() {
                     <div>
                       <div className="font-medium text-sm">{o.patient?.user?.name}</div>
                       <div className="text-xs text-gray-500">Order: {getOrderRef(o.orderNumber, o.id)}</div>
+                      <div className="text-xs text-gray-500">Prescribed on: {formatShortDate(o.createdAt)}</div>
                       <div className="text-xs text-gray-400">{o.medication?.name}</div>
                     </div>
                     <span className={BADGE[getDisplayStatus(o)] ?? 'badge-gray text-xs'}>{getDisplayStatus(o).replace('_',' ')}</span>
@@ -671,6 +724,37 @@ export default function ProviderDashboard() {
                       onChange={e => setProviderNotes(e.target.value)}
                       placeholder="Internal provider notes"
                     />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div>
+                      <label className="label">Quantity Prescribed</label>
+                      <input
+                        className="input"
+                        value={prescriptionQuantity}
+                        onChange={(e) => setPrescriptionQuantity(e.target.value)}
+                        placeholder="Ex: 4 week supply"
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Refill Count</label>
+                      <input
+                        className="input"
+                        type="number"
+                        min="0"
+                        max="99"
+                        value={prescriptionRefills}
+                        onChange={(e) => setPrescriptionRefills(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Written Date</label>
+                      <input
+                        className="input"
+                        type="date"
+                        value={prescriptionWrittenDate}
+                        onChange={(e) => setPrescriptionWrittenDate(e.target.value)}
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="label">Patient Notes (visible to patient)</label>

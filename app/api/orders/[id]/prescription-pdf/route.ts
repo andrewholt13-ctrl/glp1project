@@ -1,9 +1,11 @@
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import { prisma } from '@/lib/prisma'
 import { requireApiRole } from '@/lib/apiAuth'
+import { parsePrescriptionMeta } from '@/lib/prescriptionMeta'
 
 function compact(value: string | null | undefined, fallback = 'Not provided') {
   const normalized = (value ?? '').trim()
@@ -45,6 +47,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const selectedMeds = order.orderMedications.length > 0
     ? order.orderMedications.map((item) => item.medication)
     : (order.medication ? [order.medication] : [])
+  const prescriptionMeta = parsePrescriptionMeta(order.notes)
 
   const qs = req.nextUrl.searchParams
   const providerAddress = truncate(compact(qs.get('providerAddress')))
@@ -52,9 +55,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const providerNpi = truncate(compact(qs.get('providerNpi') ?? order.provider?.npiNumber))
   const medicationName = truncate(compact(qs.get('medicationName') ?? (selectedMeds.length > 0 ? selectedMeds.map((m) => m.name).join(', ') : null)))
   const directions = truncate(compact(qs.get('directions') ?? selectedMeds[0]?.directions))
-  const quantity = truncate(compact(qs.get('quantity') ?? selectedMeds[0]?.quantity))
-  const refills = truncate(compact(qs.get('refills'), '0'))
-  const writtenDate = truncate(compact(qs.get('writtenDate'), new Date().toISOString().slice(0, 10)))
+  const quantity = truncate(compact(qs.get('quantity') ?? prescriptionMeta?.quantity ?? selectedMeds[0]?.quantity))
+  const refills = truncate(compact(qs.get('refills'), String(prescriptionMeta?.refillsRemaining ?? 0)))
+  const writtenDate = truncate(compact(qs.get('writtenDate'), prescriptionMeta?.writtenDate ?? new Date().toISOString().slice(0, 10)))
 
   const patientAddress = [order.patient.address, order.patient.city, order.patient.state, order.patient.zip]
     .filter(Boolean)
