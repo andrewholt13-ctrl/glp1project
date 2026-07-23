@@ -28,13 +28,29 @@ type PatientProfile = {
 type Order = {
   id: string; orderNumber: string | null; status: string; createdAt: string; amountPaid: number | null; paidAt: string | null; paymentState: 'UNPAID' | 'PAID' | 'REFUNDED' | 'VOIDED'; trackingNumber: string | null
   providerNotes: string | null; patientNotes: string | null; pharmacyNotes: string | null
-  medication: { id: string; name: string; price: number } | null
-  orderMedications: Array<{ id: string; medication: { id: string; name: string; price: number } }>
+  medication: { id: string; name: string; price: number; directions: string | null; quantity: string | null } | null
+  orderMedications: Array<{ id: string; medication: { id: string; name: string; price: number; directions: string | null; quantity: string | null } }>
+  provider: { id: string; npiNumber: string | null; user: { name: string; phone: string | null } } | null
   patient: PatientProfile
 }
 
 type MedicationOption = { id: string; name: string; price: number }
 type PatientLookup = { id: string; userId: string; name: string; email: string; phone: string | null }
+type PrescriptionDraft = {
+  orderId: string
+  patientName: string
+  patientDob: string
+  patientAddress: string
+  providerName: string
+  providerAddress: string
+  providerPhone: string
+  providerNpi: string
+  medicationName: string
+  directions: string
+  quantity: string
+  refills: string
+  writtenDate: string
+}
 
 function normalizeList(value: string | null) {
   if (!value) return 'None reported'
@@ -51,6 +67,10 @@ function yesNo(value: boolean | null) {
   if (value === true) return 'Yes'
   if (value === false) return 'No'
   return 'Not answered'
+}
+
+function joinPatientAddress(profile: PatientProfile) {
+  return [profile.address, profile.city, profile.state, profile.zip].filter(Boolean).join(', ') || 'Not on file'
 }
 
 const BADGE: Record<string, string> = {
@@ -86,6 +106,7 @@ export default function ProviderDashboard() {
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [viewMode, setViewMode] = useState<'create' | 'needsReview' | 'pastPatients'>('needsReview')
   const [pastPatientSearch, setPastPatientSearch] = useState('')
+  const [prescriptionDraft, setPrescriptionDraft] = useState<PrescriptionDraft | null>(null)
 
   const load = useCallback(async (focusOrderId?: string) => {
     try {
@@ -228,12 +249,18 @@ export default function ProviderDashboard() {
     setOverrideReason('')
   }
 
-  async function prescribe() {
+  async function prescribeAndOpenDocuments() {
     if (!selected) return
     if (finalMedicationIds.length === 0) {
       alert('Select at least 1 final medication before issuing prescription.')
       return
     }
+
+    const selectedMedicationDetails = selected.orderMedications
+      .map((item) => item.medication)
+      .filter((med) => finalMedicationIds.includes(med.id))
+    const fallbackMedication = selectedMedicationDetails[0] ?? selected.medication
+
     setSaving(true)
     const res = await fetch(`/api/orders/${selected.id}`, {
       method: 'PATCH',
@@ -252,7 +279,55 @@ export default function ProviderDashboard() {
       setSaving(false)
       return
     }
-    setSaving(false); setSelected(null); load()
+
+    setPrescriptionDraft({
+      orderId: selected.id,
+      patientName: selected.patient.user.name,
+      patientDob: selected.patient.dateOfBirth ?? 'Not on file',
+      patientAddress: joinPatientAddress(selected.patient),
+      providerName: selected.provider?.user?.name ?? 'Provider',
+      providerAddress: '',
+      providerPhone: selected.provider?.user?.phone ?? '',
+      providerNpi: selected.provider?.npiNumber ?? '',
+      medicationName: selectedMedicationDetails.length > 0
+        ? selectedMedicationDetails.map((med) => med.name).join(', ')
+        : (selected.medication?.name ?? ''),
+      directions: fallbackMedication?.directions ?? '',
+      quantity: fallbackMedication?.quantity ?? '',
+      refills: '0',
+      writtenDate: new Date().toISOString().slice(0, 10),
+    })
+
+    setSaving(false)
+    setSelected(null)
+    load()
+  }
+
+  function updatePrescriptionDraft<K extends keyof PrescriptionDraft>(key: K, value: PrescriptionDraft[K]) {
+    setPrescriptionDraft((current) => {
+      if (!current) return current
+      return { ...current, [key]: value }
+    })
+  }
+
+  function downloadIntakeInfo() {
+    if (!prescriptionDraft) return
+    window.open(`/api/orders/${prescriptionDraft.orderId}/intake-export`, '_blank', 'noopener,noreferrer')
+  }
+
+  function printPrescriptionPdf() {
+    if (!prescriptionDraft) return
+    const params = new URLSearchParams({
+      providerAddress: prescriptionDraft.providerAddress,
+      providerPhone: prescriptionDraft.providerPhone,
+      providerNpi: prescriptionDraft.providerNpi,
+      medicationName: prescriptionDraft.medicationName,
+      directions: prescriptionDraft.directions,
+      quantity: prescriptionDraft.quantity,
+      refills: prescriptionDraft.refills,
+      writtenDate: prescriptionDraft.writtenDate,
+    })
+    window.open(`/api/orders/${prescriptionDraft.orderId}/prescription-pdf?${params.toString()}`, '_blank', 'noopener,noreferrer')
   }
 
   async function markReview(id: string) {
@@ -622,7 +697,7 @@ export default function ProviderDashboard() {
                     {selected.status === 'INTAKE_PENDING' && (
                       <button className="btn-secondary flex-1" onClick={() => markReview(selected.id)}>Mark Under Review</button>
                     )}
-                    <button className="btn-primary flex-1" onClick={prescribe} disabled={saving}>
+                    <button className="btn-primary flex-1" onClick={prescribeAndOpenDocuments} disabled={saving}>
                       {saving ? 'Sending…' : '✓ Issue Prescription & Request Payment'}
                     </button>
                   </div>
@@ -684,6 +759,119 @@ export default function ProviderDashboard() {
                         disabled={adminCorrectionSaving}
                       >
                         {adminCorrectionSaving ? 'Submitting…' : 'Submit Request'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {prescriptionDraft && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                  <div className="w-full max-w-3xl rounded-2xl bg-white p-5 shadow-xl">
+                    <h3 className="text-lg font-semibold">Prescription Issued</h3>
+                    <p className="mt-1 text-sm text-gray-600">
+                      Download the full intake file and print the prescription PDF before closing.
+                    </p>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="label">Provider Name</label>
+                        <input className="input" value={prescriptionDraft.providerName} readOnly />
+                      </div>
+                      <div>
+                        <label className="label">NPI</label>
+                        <input
+                          className="input"
+                          value={prescriptionDraft.providerNpi}
+                          onChange={(e) => updatePrescriptionDraft('providerNpi', e.target.value)}
+                          placeholder="NPI number"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="label">Provider Address</label>
+                        <input
+                          className="input"
+                          value={prescriptionDraft.providerAddress}
+                          onChange={(e) => updatePrescriptionDraft('providerAddress', e.target.value)}
+                          placeholder="Provider address"
+                        />
+                      </div>
+                      <div>
+                        <label className="label">Provider Phone</label>
+                        <input
+                          className="input"
+                          value={prescriptionDraft.providerPhone}
+                          onChange={(e) => updatePrescriptionDraft('providerPhone', e.target.value)}
+                          placeholder="Provider phone"
+                        />
+                      </div>
+                      <div>
+                        <label className="label">Written Date</label>
+                        <input
+                          className="input"
+                          type="date"
+                          value={prescriptionDraft.writtenDate}
+                          onChange={(e) => updatePrescriptionDraft('writtenDate', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="label">Patient Name</label>
+                        <input className="input" value={prescriptionDraft.patientName} readOnly />
+                      </div>
+                      <div>
+                        <label className="label">Patient DOB</label>
+                        <input className="input" value={prescriptionDraft.patientDob} readOnly />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="label">Patient Address</label>
+                        <input className="input" value={prescriptionDraft.patientAddress} readOnly />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="label">Selected Drug</label>
+                        <input
+                          className="input"
+                          value={prescriptionDraft.medicationName}
+                          onChange={(e) => updatePrescriptionDraft('medicationName', e.target.value)}
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="label">Directions</label>
+                        <textarea
+                          className="input"
+                          rows={2}
+                          value={prescriptionDraft.directions}
+                          onChange={(e) => updatePrescriptionDraft('directions', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="label">Quantity</label>
+                        <input
+                          className="input"
+                          value={prescriptionDraft.quantity}
+                          onChange={(e) => updatePrescriptionDraft('quantity', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="label">Refills</label>
+                        <input
+                          className="input"
+                          type="number"
+                          min="0"
+                          value={prescriptionDraft.refills}
+                          onChange={(e) => updatePrescriptionDraft('refills', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+                      <button className="btn-secondary flex-1" onClick={downloadIntakeInfo}>
+                        Download Full Intake Info
+                      </button>
+                      <button className="btn-primary flex-1" onClick={printPrescriptionPdf}>
+                        Print Prescription PDF
+                      </button>
+                      <button className="btn-secondary sm:w-auto" onClick={() => setPrescriptionDraft(null)}>
+                        Close
                       </button>
                     </div>
                   </div>

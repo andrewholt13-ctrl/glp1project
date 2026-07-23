@@ -44,12 +44,21 @@ export async function GET(req: NextRequest) {
     where,
     orderBy: { createdAt: 'desc' },
     include: {
-      medication: { select: { id: true, name: true, price: true } },
+      medication: { select: { id: true, name: true, price: true, directions: true, quantity: true } },
       orderMedications: {
-        include: { medication: { select: { id: true, name: true, price: true } } },
+        include: { medication: { select: { id: true, name: true, price: true, directions: true, quantity: true } } },
       },
       patient: { include: { user: { select: { name: true, email: true, phone: true } } } },
-      provider: { include: { user: { select: { name: true } } } },
+      provider: {
+        select: {
+          id: true,
+          npiNumber: true,
+          licenseNumber: true,
+          specialty: true,
+          bio: true,
+          user: { select: { name: true, phone: true } },
+        },
+      },
       pharmacy: { include: { user: { select: { name: true } } } },
       influencer: { include: { user: { select: { name: true } } } },
     },
@@ -152,12 +161,21 @@ export async function POST(req: NextRequest) {
       return prisma.order.create({
         data: orderData,
         include: {
-          medication: { select: { id: true, name: true, price: true } },
+          medication: { select: { id: true, name: true, price: true, directions: true, quantity: true } },
           orderMedications: {
-            include: { medication: { select: { id: true, name: true, price: true } } },
+            include: { medication: { select: { id: true, name: true, price: true, directions: true, quantity: true } } },
           },
           patient: { include: { user: { select: { name: true, email: true, phone: true } } } },
-          provider: { include: { user: { select: { name: true } } } },
+          provider: {
+            select: {
+              id: true,
+              npiNumber: true,
+              licenseNumber: true,
+              specialty: true,
+              bio: true,
+              user: { select: { name: true, phone: true } },
+            },
+          },
           pharmacy: { include: { user: { select: { name: true } } } },
           influencer: { include: { user: { select: { name: true } } } },
         },
