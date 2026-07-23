@@ -118,7 +118,7 @@ export default function LandingPage() {
           </div>
 
           {/* How it works */}
-          <div className="mt-10 grid grid-cols-3 gap-4 text-center">
+          <div className="mt-10 grid grid-cols-1 gap-4 text-center sm:grid-cols-3">
             {[
               { icon: '📋', step: '1', label: 'Complete intake form' },
               { icon: '👩‍⚕️', step: '2', label: 'Provider review & script' },

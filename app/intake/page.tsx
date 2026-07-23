@@ -121,18 +121,22 @@ export default function IntakePage() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-10">
+      <main className="max-w-2xl mx-auto px-4 py-6 sm:py-10">
         {/* Progress */}
-        <div className="flex items-center gap-2 mb-8">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(s => (
-            <div key={s} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                s < step ? 'bg-brand-600 text-white' : s === step ? 'bg-brand-600 text-white' : 'bg-gray-200 text-gray-500'
-              }`}>{s < step ? '✓' : s}</div>
-              {s < 9 && <div className={`flex-1 h-0.5 w-12 ${s < step ? 'bg-brand-600' : 'bg-gray-200'}`} />}
+        <div className="mb-8">
+          <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+            <div className="flex min-w-max items-center gap-2">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(s => (
+                <div key={s} className="flex items-center gap-2">
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
+                    s < step ? 'bg-brand-600 text-white' : s === step ? 'bg-brand-600 text-white' : 'bg-gray-200 text-gray-500'
+                  }`}>{s < step ? '✓' : s}</div>
+                  {s < 9 && <div className={`h-0.5 w-8 sm:w-12 ${s < step ? 'bg-brand-600' : 'bg-gray-200'}`} />}
+                </div>
+              ))}
             </div>
-          ))}
-          <div className="ml-2 text-sm text-gray-600">
+          </div>
+          <div className="mt-3 text-sm text-gray-600">
             {step === 1 ? 'Personal Info' : step === 2 ? 'Medical Info' : step === 3 ? 'Quick Questions' : step === 4 ? 'Heart Conditions' : step === 5 ? 'Endocrine / Kidney / Liver' : step === 6 ? 'Cancer' : step === 7 ? 'Diabetes' : step === 8 ? 'GI history' : 'Medication Preferences'}
           </div>
         </div>
@@ -142,7 +146,7 @@ export default function IntakePage() {
           {step === 1 && (
             <div>
               <h2 className="text-xl font-bold mb-5">Personal Information</h2>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="label">First Name *</label>
                   <input className="input" value={form.firstName} onChange={e => update('firstName', e.target.value)} required />
@@ -151,7 +155,7 @@ export default function IntakePage() {
                   <label className="label">Last Name *</label>
                   <input className="input" value={form.lastName} onChange={e => update('lastName', e.target.value)} required />
                 </div>
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <label className="label">Email *</label>
                   <input type="email" className="input" value={form.email} onChange={e => update('email', e.target.value)} required />
                 </div>
@@ -163,7 +167,7 @@ export default function IntakePage() {
                   <label className="label">Date of Birth *</label>
                   <input type="date" className="input" value={form.dateOfBirth} onChange={e => update('dateOfBirth', e.target.value)} required />
                 </div>
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <label className="label">Street Address</label>
                   <input className="input" value={form.address} onChange={e => update('address', e.target.value)} />
                 </div>
@@ -175,7 +179,7 @@ export default function IntakePage() {
                   <label className="label">ZIP Code</label>
                   <input className="input" value={form.zip} onChange={e => update('zip', e.target.value)} />
                 </div>
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <label className="label">Create Password *</label>
                   <input type="password" className="input" placeholder="Min 8 characters" value={form.password} onChange={e => update('password', e.target.value)} required />
                   <p className="text-xs text-gray-500 mt-1">You&apos;ll use this to log in and check your order status.</p>
@@ -200,7 +204,7 @@ export default function IntakePage() {
               <h2 className="text-xl font-bold mb-2">Medical History</h2>
               <p className="text-sm text-gray-500 mb-5">This information helps your provider evaluate you safely.</p>
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="label">Current Weight (lbs)</label>
                     <input className="input" value={form.weight} onChange={e => update('weight', e.target.value)} />
@@ -223,7 +227,7 @@ export default function IntakePage() {
                   <textarea className="input" rows={3} value={form.medicalHistory} onChange={e => update('medicalHistory', e.target.value)} placeholder="Diabetes, thyroid issues, heart conditions, prior GLP-1 use, etc." />
                 </div>
               </div>
-              <div className="flex gap-3 mt-6">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button className="btn-secondary flex-1" onClick={() => setStep(1)}>← Back</button>
                 <button className="btn-primary flex-1" onClick={() => setStep(3)}>Continue →</button>
               </div>
@@ -235,9 +239,9 @@ export default function IntakePage() {
             <div>
               <h2 className="text-xl font-bold mb-2">Quick Questions</h2>
               <p className="text-sm text-gray-500 mb-5">Have you seen your primary care provider in the past 12 months?</p>
-              <div className="flex gap-3">
-                <button className={`btn-primary ${pcpSeen === true ? 'opacity-100' : 'opacity-90'}`} onClick={() => { setPcpSeen(true); setStep(4) }}>Yes</button>
-                <button className={`btn-secondary ${pcpSeen === false ? 'opacity-100' : 'opacity-90'}`} onClick={() => { setPcpSeen(false); setStep(4) }}>No</button>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button className={`btn-primary w-full sm:w-auto ${pcpSeen === true ? 'opacity-100' : 'opacity-90'}`} onClick={() => { setPcpSeen(true); setStep(4) }}>Yes</button>
+                <button className={`btn-secondary w-full sm:w-auto ${pcpSeen === false ? 'opacity-100' : 'opacity-90'}`} onClick={() => { setPcpSeen(false); setStep(4) }}>No</button>
               </div>
             </div>
           )}
@@ -257,7 +261,7 @@ export default function IntakePage() {
                   </label>
                 ))}
                 {showOtherHeart ? (
-                  <div className="flex gap-2 mt-2">
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                     <input className="input" value={otherHeart} onChange={e => setOtherHeart(e.target.value)} placeholder="Describe other heart condition" />
                     <button className="btn-primary" onClick={() => { if (otherHeart.trim()) { setHeartConditions(c => [...c, otherHeart.trim()]); setOtherHeart(''); setShowOtherHeart(false) } }}>Add</button>
                     <button className="btn-secondary" onClick={() => { setShowOtherHeart(false); setOtherHeart('') }}>Cancel</button>
@@ -266,7 +270,7 @@ export default function IntakePage() {
                   <button className="btn-link mt-2 text-sm" onClick={() => setShowOtherHeart(true)}>Add other</button>
                 )}
               </div>
-              <div className="flex gap-3 mt-6">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button className="btn-secondary flex-1" onClick={() => setStep(3)}>← Back</button>
                 <button className="btn-primary flex-1" onClick={() => setStep(5)}>Continue →</button>
               </div>
@@ -288,7 +292,7 @@ export default function IntakePage() {
                   </label>
                 ))}
                 {showOtherEndocrine ? (
-                  <div className="flex gap-2 mt-2">
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                     <input className="input" value={otherEndocrine} onChange={e => setOtherEndocrine(e.target.value)} placeholder="Describe other condition" />
                     <button className="btn-primary" onClick={() => { if (otherEndocrine.trim()) { setEndocrineConditions(c => [...c, otherEndocrine.trim()]); setOtherEndocrine(''); setShowOtherEndocrine(false) } }}>Add</button>
                     <button className="btn-secondary" onClick={() => { setShowOtherEndocrine(false); setOtherEndocrine('') }}>Cancel</button>
@@ -297,7 +301,7 @@ export default function IntakePage() {
                   <button className="btn-link mt-2 text-sm" onClick={() => setShowOtherEndocrine(true)}>Add other</button>
                 )}
               </div>
-              <div className="flex gap-3 mt-6">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button className="btn-secondary flex-1" onClick={() => setStep(4)}>← Back</button>
                 <button className="btn-primary flex-1" onClick={() => setStep(6)}>Continue →</button>
               </div>
@@ -316,7 +320,7 @@ export default function IntakePage() {
                 </button>
                 ))}
               </div>
-              <div className="flex gap-3 mt-6">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button className="btn-secondary flex-1" onClick={() => setStep(5)}>← Back</button>
                 <button className="btn-primary flex-1" onClick={() => setStep(7)} disabled={!cancerHistory}>Continue →</button>
               </div>
@@ -335,7 +339,7 @@ export default function IntakePage() {
                 </button>
                 ))}
               </div>
-              <div className="flex gap-3 mt-6">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button className="btn-secondary flex-1" onClick={() => setStep(6)}>← Back</button>
                 <button className="btn-primary flex-1" onClick={() => setStep(8)} disabled={!diabetesStatus}>Continue →</button>
               </div>
@@ -355,7 +359,7 @@ export default function IntakePage() {
                   </label>
                 ))}
                 {showOtherGi ? (
-                  <div className="flex gap-2 mt-2">
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                     <input className="input" value={otherGi} onChange={e => setOtherGi(e.target.value)} placeholder="Describe other GI condition" />
                     <button className="btn-primary" onClick={() => { if (otherGi.trim()) { setGiConditions(c => [...c, otherGi.trim()]); setOtherGi(''); setShowOtherGi(false) } }}>Add</button>
                     <button className="btn-secondary" onClick={() => { setShowOtherGi(false); setOtherGi('') }}>Cancel</button>
@@ -364,7 +368,7 @@ export default function IntakePage() {
                   <button className="btn-link mt-2 text-sm" onClick={() => setShowOtherGi(true)}>Add other</button>
                 )}
               </div>
-              <div className="flex gap-3 mt-6">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button className="btn-secondary flex-1" onClick={() => setStep(7)}>← Back</button>
                 <button className="btn-primary flex-1" onClick={() => setStep(9)}>Continue →</button>
               </div>
@@ -426,13 +430,13 @@ export default function IntakePage() {
                       }}
                       className="sr-only"
                     />
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <div className="font-semibold text-gray-900">{med.name}</div>
                         <div className="text-sm text-gray-500 mt-0.5">{med.description}</div>
                         <div className="text-xs text-gray-400 mt-1">Qty: {med.quantity}</div>
                       </div>
-                      <div className="text-right ml-4 flex-shrink-0">
+                      <div className="flex-shrink-0 sm:ml-4 sm:text-right">
                         <div className="font-bold text-brand-700 text-lg">${med.price}</div>
                         <div className="text-xs text-gray-400">one-time</div>
                       </div>
@@ -441,7 +445,7 @@ export default function IntakePage() {
                 ))}
               </div>
 
-              <div className="flex gap-3 mt-6">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button className="btn-secondary flex-1" onClick={() => setStep(8)}>← Back</button>
                 <button
                   className="btn-primary flex-1"
