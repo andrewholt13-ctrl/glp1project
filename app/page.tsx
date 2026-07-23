@@ -41,19 +41,19 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-brand-50 via-stone-50 to-white">
       {/* Nav */}
-      <header className="border-b border-gray-200 bg-white/80 backdrop-blur sticky top-0 z-10">
+      <header className="sticky top-0 z-10 border-b border-brand-100 bg-white/90 backdrop-blur">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-start">
-          <span className="font-bold text-brand-700 text-lg">💊 GLP-1 Wellness</span>
+          <span className="text-lg font-bold text-brand-700">💊 GLP-1 Wellness</span>
         </div>
       </header>
 
       {/* Hero */}
       <main className="max-w-5xl mx-auto px-4 py-16">
         <div className="text-center mb-8">
-          <div className="mx-auto mb-6 max-w-xl rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm">
-            <p className="text-sm text-slate-600">
+          <div className="mx-auto mb-6 max-w-xl rounded-3xl border border-brand-100 bg-white p-4 shadow-sm">
+            <p className="text-sm text-stone-600">
               Have an account? Sign in here to manage your intake, orders, and provider visits.
             </p>
             <div className="mt-4 flex justify-center">
@@ -69,10 +69,10 @@ export default function LandingPage() {
           <span className="inline-block bg-brand-100 text-brand-700 text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full mb-4">
             Medical Weight Loss Program
           </span>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
+          <h1 className="text-4xl font-extrabold leading-tight text-stone-900 md:text-5xl">
             Lose Weight with <span className="text-brand-600">GLP-1 Therapy</span>
           </h1>
-          <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-stone-600">
             Semaglutide &amp; Tirzepatide programs with licensed providers, compounding pharmacy, and ongoing support — all in one place.
           </p>
         </div>
@@ -80,8 +80,8 @@ export default function LandingPage() {
         {/* State Selector Card */}
         <div className="max-w-md mx-auto">
           <div className="card text-center">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Get Started</h2>
-            <p className="text-sm text-gray-500 mb-6">Select your state to check availability.</p>
+            <h2 className="mb-2 text-xl font-bold text-stone-900">Get Started</h2>
+            <p className="mb-6 text-sm text-stone-500">Select your state to check availability.</p>
 
             <div className="mb-4">
               <label className="label text-left">Which state do you live in?</label>
@@ -106,7 +106,7 @@ export default function LandingPage() {
             </button>
 
             {selectedState && selectedState !== 'Georgia' && (
-              <p className="mt-3 text-xs text-gray-500">
+              <p className="mt-3 text-xs text-stone-500">
                 We&apos;ll connect you with a partner program that serves {selectedState}.
               </p>
             )}
@@ -124,10 +124,10 @@ export default function LandingPage() {
               { icon: '👩‍⚕️', step: '2', label: 'Provider review & script' },
               { icon: '📦', step: '3', label: 'Medication delivered' },
             ].map(item => (
-              <div key={item.step} className="card py-4 px-3">
+              <div key={item.step} className="card px-3 py-4">
                 <div className="text-2xl mb-1">{item.icon}</div>
                 <div className="text-xs font-bold text-brand-600 uppercase">Step {item.step}</div>
-                <div className="text-xs text-gray-600 mt-1">{item.label}</div>
+                <div className="mt-1 text-xs text-stone-600">{item.label}</div>
               </div>
             ))}
           </div>

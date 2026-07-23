@@ -62,21 +62,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10">
+    <div className="min-h-screen bg-stone-50 py-10">
       <div className="mx-auto w-full max-w-3xl px-4">
         <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr] items-center">
-          <div className="rounded-3xl bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] ring-1 ring-slate-200 sm:p-10">
+          <div className="rounded-3xl bg-white p-8 shadow-[0_24px_80px_rgba(74,59,42,0.08)] ring-1 ring-brand-100 sm:p-10">
             <div className="flex items-center gap-3 mb-8">
               <div className="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-brand-600 text-white shadow-sm">
                 <span className="text-xl">💊</span>
               </div>
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brand-600">GLP-1 Wellness</p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Sign in to your account</h1>
+                <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">Sign in to your account</h1>
               </div>
             </div>
 
-            <p className="max-w-xl text-sm leading-6 text-slate-600 mb-8">
+            <p className="mb-8 max-w-xl text-sm leading-6 text-stone-600">
               Secure access to your patient dashboard, appointment information, order status, and treatment progress.
             </p>
 
@@ -125,7 +125,7 @@ export default function LoginPage() {
               </form>
             </div>
 
-            <div className="mt-6 flex items-center justify-between text-sm text-slate-500">
+            <div className="mt-6 flex items-center justify-between text-sm text-stone-500">
               <p>New patient?</p>
               <a href="/" className="font-medium text-brand-600 hover:text-brand-700">
                 Start your program
@@ -133,7 +133,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="hidden rounded-3xl bg-gradient-to-br from-brand-600 to-cyan-500 p-8 text-white shadow-[0_24px_80px_rgba(15,23,42,0.08)] lg:block">
+          <div className="hidden rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-brand-500 p-8 text-white shadow-[0_24px_80px_rgba(74,59,42,0.12)] lg:block">
             <div className="space-y-6">
               <div>
                 <p className="text-sm uppercase tracking-[0.24em] opacity-90">Welcome back</p>
