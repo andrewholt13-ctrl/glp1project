@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
+import { PDFDocument, PDFPage, PDFFont, StandardFonts, rgb } from 'pdf-lib'
 import { prisma } from '@/lib/prisma'
 import { requireApiRole } from '@/lib/apiAuth'
 import { parsePrescriptionMeta } from '@/lib/prescriptionMeta'
@@ -19,6 +19,43 @@ function safeFilePart(value: string) {
 function truncate(value: string, max = 300) {
   if (value.length <= max) return value
   return `${value.slice(0, max - 3)}...`
+}
+
+function drawWrappedText(
+  page: PDFPage,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  font: PDFFont,
+  size: number
+) {
+  const words = text.split(/\s+/)
+  const lines: string[] = []
+  let current = ''
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word
+    if (font.widthOfTextAtSize(candidate, size) <= maxWidth) {
+      current = candidate
+    } else {
+      if (current) lines.push(current)
+      current = word
+    }
+  }
+  if (current) lines.push(current)
+
+  lines.forEach((line, index) => {
+    page.drawText(line, {
+      x,
+      y: y - index * (size + 3),
+      size,
+      font,
+      color: rgb(0.1, 0.1, 0.1),
+    })
+  })
+
+  return lines.length
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -68,56 +105,175 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const font = await pdf.embedFont(StandardFonts.Helvetica)
   const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold)
 
-  const drawLine = (text: string, y: number, size = 11, bold = false) => {
-    page.drawText(text, {
-      x: 50,
-      y,
-      size,
-      font: bold ? fontBold : font,
-      color: rgb(0.1, 0.1, 0.1),
-    })
-  }
+  const width = 612
+  const height = 792
+  const margin = 42
+  const contentWidth = width - margin * 2
 
-  let y = 740
-  drawLine('Prescription Order', y, 22, true)
-  y -= 28
-  drawLine(`Written Date: ${writtenDate}`, y)
+  page.drawRectangle({
+    x: margin - 8,
+    y: margin - 8,
+    width: contentWidth + 16,
+    height: height - margin * 2 + 16,
+    borderColor: rgb(0.86, 0.86, 0.86),
+    borderWidth: 1,
+  })
+
+  page.drawText('PRESCRIPTION', {
+    x: margin,
+    y: height - 70,
+    size: 20,
+    font: fontBold,
+    color: rgb(0.08, 0.08, 0.08),
+  })
+
+  page.drawText('Rx', {
+    x: margin,
+    y: height - 120,
+    size: 30,
+    font: fontBold,
+    color: rgb(0.08, 0.08, 0.08),
+  })
+
+  const providerName = compact(order.provider?.user?.name, 'Not assigned')
+  const orderRef = order.orderNumber ?? order.id.slice(0, 8)
+
+  page.drawText(providerName, {
+    x: margin,
+    y: height - 92,
+    size: 13,
+    font: fontBold,
+    color: rgb(0.08, 0.08, 0.08),
+  })
+  page.drawText(providerAddress, {
+    x: margin,
+    y: height - 108,
+    size: 10,
+    font,
+    color: rgb(0.2, 0.2, 0.2),
+  })
+  page.drawText(`Phone: ${providerPhone}   NPI: ${providerNpi}`, {
+    x: margin,
+    y: height - 122,
+    size: 10,
+    font,
+    color: rgb(0.2, 0.2, 0.2),
+  })
+
+  page.drawText(`Date Written: ${writtenDate}`, {
+    x: width - margin - 180,
+    y: height - 92,
+    size: 11,
+    font,
+    color: rgb(0.1, 0.1, 0.1),
+  })
+  page.drawText(`Order #: ${orderRef}`, {
+    x: width - margin - 180,
+    y: height - 108,
+    size: 11,
+    font,
+    color: rgb(0.1, 0.1, 0.1),
+  })
+
+  let y = height - 160
+  page.drawLine({
+    start: { x: margin, y },
+    end: { x: width - margin, y },
+    thickness: 1,
+    color: rgb(0.75, 0.75, 0.75),
+  })
+
   y -= 22
-  drawLine(`Order Number: ${order.orderNumber ?? order.id.slice(0, 8)}`, y)
+  page.drawText(`Patient: ${compact(order.patient.user.name)}`, {
+    x: margin,
+    y,
+    size: 12,
+    font,
+    color: rgb(0.1, 0.1, 0.1),
+  })
+  page.drawText(`DOB: ${compact(order.patient.dateOfBirth)}`, {
+    x: width - margin - 180,
+    y,
+    size: 12,
+    font,
+    color: rgb(0.1, 0.1, 0.1),
+  })
 
-  y -= 32
-  drawLine('Provider Information', y, 14, true)
-  y -= 20
-  drawLine(`Name: ${compact(order.provider?.user?.name, 'Not assigned')}`, y)
   y -= 18
-  drawLine(`Address: ${providerAddress}`, y)
-  y -= 18
-  drawLine(`Phone: ${providerPhone}`, y)
-  y -= 18
-  drawLine(`NPI: ${providerNpi}`, y)
+  page.drawText(`Address: ${compact(patientAddress, 'Not provided')}`, {
+    x: margin,
+    y,
+    size: 11,
+    font,
+    color: rgb(0.2, 0.2, 0.2),
+  })
 
-  y -= 30
-  drawLine('Patient Information', y, 14, true)
-  y -= 20
-  drawLine(`Name: ${compact(order.patient.user.name)}`, y)
-  y -= 18
-  drawLine(`DOB: ${compact(order.patient.dateOfBirth)}`, y)
-  y -= 18
-  drawLine(`Address: ${compact(patientAddress, 'Not provided')}`, y)
+  y -= 22
+  page.drawLine({
+    start: { x: margin, y },
+    end: { x: width - margin, y },
+    thickness: 1,
+    color: rgb(0.85, 0.85, 0.85),
+  })
 
-  y -= 30
-  drawLine('Medication Details', y, 14, true)
-  y -= 20
-  drawLine(`Selected Drug: ${medicationName}`, y)
-  y -= 18
-  drawLine(`Directions: ${directions}`, y)
-  y -= 18
-  drawLine(`Quantity: ${quantity}`, y)
-  y -= 18
-  drawLine(`Refills: ${refills}`, y)
+  y -= 26
+  page.drawText('Medication:', {
+    x: margin,
+    y,
+    size: 12,
+    font: fontBold,
+    color: rgb(0.1, 0.1, 0.1),
+  })
+  const medLines = drawWrappedText(page, medicationName, margin + 85, y, contentWidth - 90, font, 12)
 
-  y -= 40
-  drawLine('Provider Signature: ________________________________', y)
+  y -= Math.max(20, medLines * 15)
+  page.drawText('Directions:', {
+    x: margin,
+    y,
+    size: 12,
+    font: fontBold,
+    color: rgb(0.1, 0.1, 0.1),
+  })
+  const dirLines = drawWrappedText(page, directions, margin + 85, y, contentWidth - 90, font, 11)
+
+  y -= Math.max(24, dirLines * 14 + 8)
+  page.drawText(`Quantity: ${quantity}`, {
+    x: margin,
+    y,
+    size: 12,
+    font,
+    color: rgb(0.1, 0.1, 0.1),
+  })
+  page.drawText(`Refills: ${refills}`, {
+    x: margin + 250,
+    y,
+    size: 12,
+    font,
+    color: rgb(0.1, 0.1, 0.1),
+  })
+
+  y -= 42
+  const signatureX = width - margin - 240
+  page.drawLine({
+    start: { x: signatureX, y },
+    end: { x: width - margin, y },
+    thickness: 1,
+    color: rgb(0.2, 0.2, 0.2),
+  })
+  page.drawText('Provider Signature', {
+    x: signatureX,
+    y: y - 12,
+    size: 9,
+    font,
+    color: rgb(0.35, 0.35, 0.35),
+  })
+  page.drawText(providerName, {
+    x: signatureX,
+    y: y - 28,
+    size: 11,
+    font: fontBold,
+    color: rgb(0.08, 0.08, 0.08),
+  })
 
   const pdfBytes = await pdf.save()
   const patientSlug = safeFilePart(order.patient.user.name || 'patient')
