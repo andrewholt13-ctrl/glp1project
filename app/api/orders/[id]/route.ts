@@ -177,6 +177,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const overrideReason = typeof body.overrideReason === 'string' ? body.overrideReason.trim() : ''
   const paymentStateInput = body.paymentState
   const paymentStateReason = typeof body.paymentStateReason === 'string' ? body.paymentStateReason.trim() : ''
+  const providerIdInput = typeof body.providerId === 'string' ? body.providerId.trim() : null
+  const pharmacyIdInput = typeof body.pharmacyId === 'string' ? body.pharmacyId.trim() : null
 
   let nextStatus: AllowedStatus | null = null
   if (requestedStatus != null) {
@@ -272,6 +274,30 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
   }
 
+  if ((providerIdInput || pharmacyIdInput) && !isMasterAdmin && !isDailyAdmin) {
+    return NextResponse.json({ error: 'Only admins can reassign provider or pharmacy.' }, { status: 403 })
+  }
+
+  if (providerIdInput) {
+    const provider = await prisma.provider.findFirst({
+      where: { id: providerIdInput, isActive: true },
+      select: { id: true },
+    })
+    if (!provider) {
+      return NextResponse.json({ error: 'Selected provider is invalid or inactive.' }, { status: 400 })
+    }
+  }
+
+  if (pharmacyIdInput) {
+    const pharmacy = await prisma.pharmacy.findFirst({
+      where: { id: pharmacyIdInput, isActive: true },
+      select: { id: true },
+    })
+    if (!pharmacy) {
+      return NextResponse.json({ error: 'Selected pharmacy is invalid or inactive.' }, { status: 400 })
+    }
+  }
+
   // Shipping lock: only paid orders can move to shipped/completed.
   if ((nextStatus === 'SHIPPED' || nextStatus === 'COMPLETED') && effectivePaymentState !== 'PAID') {
     return NextResponse.json({ error: 'Must be paid before shipping.' }, { status: 400 })
@@ -300,6 +326,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (key in body) updateData[key] = body[key]
   }
   if (nextStatus) updateData.status = nextStatus
+  if (providerIdInput) updateData.providerId = providerIdInput
+  if (pharmacyIdInput) updateData.pharmacyId = pharmacyIdInput
   if (nextPaymentState) {
     updateData.paymentState = nextPaymentState
     updateData.paymentStateReason = paymentStateReason || null
@@ -309,6 +337,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const beforeSnapshot = JSON.stringify({
     status: existing.status,
     medicationId: existing.medicationId,
+    providerId: existing.providerId,
+    pharmacyId: existing.pharmacyId,
     providerNotes: existing.providerNotes,
     patientNotes: existing.patientNotes,
     pharmacyNotes: existing.pharmacyNotes,
@@ -345,6 +375,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         afterValue: JSON.stringify({
           status: order.status,
           medicationId: order.medicationId,
+          providerId: order.providerId,
+          pharmacyId: order.pharmacyId,
           providerNotes: order.providerNotes,
           patientNotes: order.patientNotes,
           pharmacyNotes: order.pharmacyNotes,

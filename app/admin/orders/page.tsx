@@ -9,12 +9,15 @@ type Order = {
   paymentState: 'UNPAID' | 'PAID' | 'REFUNDED' | 'VOIDED'
   patient: { user: { name: string; email: string; phone: string } }
   medication: { name: string; price: number } | null
-  provider: { user: { name: string } } | null
+  provider: { id: string; user: { name: string } } | null
+  pharmacy: { id: string; user: { name: string } } | null
   influencer: { user: { name: string }; code: string } | null
 }
 
 type MedicationOption = { id: string; name: string; price: number }
 type PatientLookup = { id: string; userId: string; name: string; email: string; phone: string | null }
+type ProviderOption = { id: string; specialty: string | null; user: { name: string } }
+type PharmacyOption = { id: string; isDefault: boolean; user: { name: string } }
 
 const STATUS_OPTIONS = ['INTAKE_PENDING','PROVIDER_REVIEW','REFILL_REQUESTED','PRESCRIBED','PHARMACY_PENDING','SHIPPED','COMPLETED','CANCELLED']
 const BADGE: Record<string, string> = {
@@ -27,6 +30,8 @@ export default function AdminOrdersPage() {
   const searchParams = useSearchParams()
   const [orders, setOrders] = useState<Order[]>([])
   const [medications, setMedications] = useState<MedicationOption[]>([])
+  const [providers, setProviders] = useState<ProviderOption[]>([])
+  const [pharmacies, setPharmacies] = useState<PharmacyOption[]>([])
   const [currentRole, setCurrentRole] = useState('')
   const [filter, setFilter] = useState('')
   const [updating, setUpdating] = useState<string | null>(null)
@@ -78,6 +83,20 @@ export default function AdminOrdersPage() {
         setMedications(Array.isArray(data) ? data : [])
       })
       .catch(() => setMedications([]))
+    fetch('/api/providers')
+      .then(async (r) => {
+        const text = await r.text()
+        const data = text ? JSON.parse(text) : []
+        setProviders(Array.isArray(data) ? data : [])
+      })
+      .catch(() => setProviders([]))
+    fetch('/api/pharmacies')
+      .then(async (r) => {
+        const text = await r.text()
+        const data = text ? JSON.parse(text) : []
+        setPharmacies(Array.isArray(data) ? data : [])
+      })
+      .catch(() => setPharmacies([]))
   }, [])
 
   useEffect(() => {
@@ -233,6 +252,39 @@ export default function AdminOrdersPage() {
     }
   }
 
+  async function updateAssignment(orderId: string, field: 'providerId' | 'pharmacyId', value: string) {
+    if (!value) return
+
+    setUpdating(orderId)
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value }),
+      })
+      const text = await res.text()
+      let data: { error?: string } | null = null
+      try {
+        data = text ? JSON.parse(text) : null
+      } catch {
+        data = null
+      }
+
+      if (!res.ok) {
+        alert(data?.error ?? text ?? 'Assignment update failed.')
+        await load()
+        return
+      }
+
+      await load()
+    } catch {
+      alert('Assignment update failed. Please try again.')
+      await load()
+    } finally {
+      setUpdating(null)
+    }
+  }
+
   const safeOrders = Array.isArray(orders) ? orders : []
   const filtered = filter ? safeOrders.filter(o => o.status === filter) : safeOrders
   const visibleOrders = filtered.filter((o) => o.paymentState !== 'VOIDED')
@@ -329,6 +381,38 @@ export default function AdminOrdersPage() {
                 </div>
                 <div className="text-sm text-gray-500 mt-1">
                   {o.medication?.name ?? 'No medication selected'} · {o.paymentState}{o.amountPaid != null ? ` ($${o.amountPaid} captured)` : ''}
+                </div>
+                <div className="mt-2 grid gap-2 text-sm text-gray-600 md:grid-cols-2">
+                  <label className="flex items-center gap-2">
+                    <span className="w-16 shrink-0 text-xs font-medium uppercase tracking-wide text-gray-500">Doctor</span>
+                    <select
+                      className="input py-1 text-xs"
+                      value={o.provider?.id ?? ''}
+                      onChange={(e) => updateAssignment(o.id, 'providerId', e.target.value)}
+                      disabled={updating === o.id || !['MASTER_ADMIN', 'ADMIN'].includes(currentRole)}
+                    >
+                      {providers.map((provider) => (
+                        <option key={provider.id} value={provider.id}>
+                          {provider.user.name}{provider.specialty ? ` • ${provider.specialty}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <span className="w-16 shrink-0 text-xs font-medium uppercase tracking-wide text-gray-500">Pharmacy</span>
+                    <select
+                      className="input py-1 text-xs"
+                      value={o.pharmacy?.id ?? ''}
+                      onChange={(e) => updateAssignment(o.id, 'pharmacyId', e.target.value)}
+                      disabled={updating === o.id || !['MASTER_ADMIN', 'ADMIN'].includes(currentRole)}
+                    >
+                      {pharmacies.map((pharmacy) => (
+                        <option key={pharmacy.id} value={pharmacy.id}>
+                          {pharmacy.user.name}{pharmacy.isDefault ? ' (Default)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">Order: {getOrderRef(o.orderNumber, o.id)}</div>
                 <div className="text-xs text-gray-400 mt-0.5">{new Date(o.createdAt).toLocaleString()}</div>
