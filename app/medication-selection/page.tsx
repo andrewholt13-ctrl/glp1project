@@ -50,7 +50,7 @@ export default function MedicationSelectionPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <a href="/" className="font-bold text-brand-700">💊 GLP-1 Wellness</a>
+          <a href="/" className="font-bold text-brand-700">💊 Butter Health</a>
           <span className="text-sm text-gray-500">Medication Selection</span>
         </div>
       </header>

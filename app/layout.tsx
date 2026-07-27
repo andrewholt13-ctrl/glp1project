@@ -8,8 +8,8 @@ import GlobalShell from '@/components/layout/GlobalShell'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'GLP-1 Wellness Platform',
-  description: 'Telehealth weight management program',
+  title: 'Butter Health',
+  description: 'Butter Health telehealth weight management program',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

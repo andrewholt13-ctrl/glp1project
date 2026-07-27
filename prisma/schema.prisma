@@ -193,7 +193,7 @@ model OrderMedication {
 model AppSettings {
   id               String @id @default("singleton")
   outOfStateUrl    String @default("https://example.com/other-states")
-  platformName     String @default("GLP-1 Wellness")
+  platformName     String @default("Butter Health")
   supportEmail     String @default("support@example.com")
   defaultPharmacyId String?
   updatedAt        DateTime @updatedAt

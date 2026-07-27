@@ -28,10 +28,10 @@ async function main() {
 
   // Master Admin
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@glp1platform.com' },
+    where: { email: 'admin@butterhealth.com' },
     update: {},
     create: {
-      email: 'admin@glp1platform.com',
+      email: 'admin@butterhealth.com',
       passwordHash: hash('Admin@123!'),
       role: 'MASTER_ADMIN',
       name: 'Master Admin',
@@ -40,10 +40,10 @@ async function main() {
 
   // Daily Admin
   await prisma.user.upsert({
-    where: { email: 'ops@glp1platform.com' },
+    where: { email: 'ops@butterhealth.com' },
     update: {},
     create: {
-      email: 'ops@glp1platform.com',
+      email: 'ops@butterhealth.com',
       passwordHash: hash('OpsAdmin@123!'),
       role: 'ADMIN',
       name: 'Operations Admin',
@@ -52,10 +52,10 @@ async function main() {
 
   // Sample Provider
   const providerUser = await prisma.user.upsert({
-    where: { email: 'doctor@glp1platform.com' },
+    where: { email: 'doctor@butterhealth.com' },
     update: {},
     create: {
-      email: 'doctor@glp1platform.com',
+      email: 'doctor@butterhealth.com',
       passwordHash: hash('Doctor@123!'),
       role: 'PROVIDER',
       name: 'Dr. Sarah Johnson',
@@ -74,10 +74,10 @@ async function main() {
 
   // Sample Pharmacy
   const pharmacyUser = await prisma.user.upsert({
-    where: { email: 'pharmacy@glp1platform.com' },
+    where: { email: 'pharmacy@butterhealth.com' },
     update: {},
     create: {
-      email: 'pharmacy@glp1platform.com',
+      email: 'pharmacy@butterhealth.com',
       passwordHash: hash('Pharmacy@123!'),
       role: 'PHARMACY',
       name: 'Peach State Compounding',
@@ -95,10 +95,10 @@ async function main() {
 
   // Sample Influencer
   const influencerUser = await prisma.user.upsert({
-    where: { email: 'influencer@glp1platform.com' },
+    where: { email: 'influencer@butterhealth.com' },
     update: {},
     create: {
-      email: 'influencer@glp1platform.com',
+      email: 'influencer@butterhealth.com',
       passwordHash: hash('Influencer@123!'),
       role: 'INFLUENCER',
       name: 'Alex Rivers',
@@ -165,17 +165,17 @@ async function main() {
     create: {
       id: 'singleton',
       outOfStateUrl: 'https://example.com/national-program',
-      platformName: 'GLP-1 Wellness',
-      supportEmail: 'support@glp1wellness.com',
+      platformName: 'Butter Health',
+      supportEmail: 'support@butterhealth.com',
     },
   })
 
   console.log('✅ Seed complete')
-  console.log('Admin: admin@glp1platform.com / Admin@123!')
-  console.log('Ops Admin: ops@glp1platform.com / OpsAdmin@123!')
-  console.log('Provider: doctor@glp1platform.com / Doctor@123!')
-  console.log('Pharmacy: pharmacy@glp1platform.com / Pharmacy@123!')
-  console.log('Influencer: influencer@glp1platform.com / Influencer@123!')
+  console.log('Admin: admin@butterhealth.com / Admin@123!')
+  console.log('Ops Admin: ops@butterhealth.com / OpsAdmin@123!')
+  console.log('Provider: doctor@butterhealth.com / Doctor@123!')
+  console.log('Pharmacy: pharmacy@butterhealth.com / Pharmacy@123!')
+  console.log('Influencer: influencer@butterhealth.com / Influencer@123!')
   console.log('Influencer code: ALEXRIVERS')
 }
 

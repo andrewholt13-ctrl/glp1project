@@ -45,7 +45,7 @@ export default function LandingPage() {
       {/* Nav */}
       <header className="sticky top-0 z-10 border-b border-brand-100 bg-white/90 backdrop-blur">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-start">
-          <span className="text-lg font-bold text-brand-700">💊 GLP-1 Wellness</span>
+          <span className="text-lg font-bold text-brand-700">💊 Butter Health</span>
         </div>
       </header>
 
@@ -70,7 +70,7 @@ export default function LandingPage() {
             Medical Weight Loss Program
           </span>
           <h1 className="text-4xl font-extrabold leading-tight text-stone-900 md:text-5xl">
-            Lose Weight with <span className="text-brand-600">GLP-1 Therapy</span>
+            Lose Weight with <span className="text-brand-600">Butter Health</span>
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-stone-600">
             Semaglutide &amp; Tirzepatide programs with licensed providers, compounding pharmacy, and ongoing support — all in one place.

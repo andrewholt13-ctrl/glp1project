@@ -14,6 +14,7 @@ import { randomBytes, createHash } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { enforceRateLimit, getClientIp } from '@/lib/rateLimit'
 import { getRequestId, logApiEvent, redactEmail } from '@/lib/apiLogging'
+import { buildPasswordResetEmail, sendPasswordResetEmail } from '@/lib/email'
 
 function hashResetCode(code: string) {
   return createHash('sha256').update(code).digest('hex')
@@ -65,11 +66,26 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // In local/dev, return the code directly since email delivery may not be configured.
-    if (process.env.NODE_ENV !== 'production') {
-      logApiEvent('info', 'auth.forgot.generated_dev_code', { requestId, userId: user.id })
-      return NextResponse.json({ ok: true, resetCode: code })
+    const appName = process.env.APP_NAME ?? 'Butter Health'
+    const emailPayload = buildPasswordResetEmail({
+      to: user.email,
+      resetCode: code,
+      appName,
+    })
+
+    const mailSent = await sendPasswordResetEmail(emailPayload)
+
+    if (!mailSent) {
+      if (process.env.NODE_ENV !== 'production') {
+        logApiEvent('info', 'auth.forgot.generated_dev_code', { requestId, userId: user.id })
+        return NextResponse.json({ ok: true, resetCode: code })
+      }
+
+      logApiEvent('warn', 'auth.forgot.mail_unavailable', { requestId, userId: user.id, email: redactEmail(user.email) })
+      return NextResponse.json({ ok: true, message: 'Password reset requested. If email delivery is unavailable, contact support.' })
     }
+
+    logApiEvent('info', 'auth.forgot.email_sent', { requestId, userId: user.id, email: redactEmail(user.email) })
   }
 
   logApiEvent('info', 'auth.forgot.completed', { requestId, ip, email: redactEmail(email) })

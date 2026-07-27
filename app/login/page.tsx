@@ -71,7 +71,7 @@ export default function LoginPage() {
                 <span className="text-xl">💊</span>
               </div>
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brand-600">GLP-1 Wellness</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brand-600">Butter Health</p>
                 <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">Sign in to your account</h1>
               </div>
             </div>

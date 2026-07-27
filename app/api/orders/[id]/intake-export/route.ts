@@ -54,7 +54,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
     : (order.medication ? [order.medication] : [])
 
   const intakeReport = [
-    'GLP-1 WELLNESS PLATFORM - INTAKE EXPORT',
+    'BUTTER HEALTH - INTAKE EXPORT',
     `Generated: ${new Date().toISOString()}`,
     `Order ID: ${order.id}`,
     `Order Number: ${order.orderNumber ?? 'Not assigned'}`,

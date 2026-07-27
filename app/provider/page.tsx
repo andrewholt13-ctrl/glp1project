@@ -263,6 +263,7 @@ export default function ProviderDashboard() {
     setPrescriptionWrittenDate(new Date().toISOString().slice(0, 10))
     setOverrideStatus(o.status)
     setOverrideReason('')
+    setPrescriptionDraft(null)
   }
 
   async function prescribeAndOpenDocuments() {
@@ -814,6 +815,37 @@ export default function ProviderDashboard() {
                       </button>
                     </>
                   )}
+                </div>
+              )}
+
+              {selected && (
+                <div className="border-t pt-4 space-y-3">
+                  <h3 className="font-medium">Order Documents</h3>
+                  <p className="text-xs text-gray-500">Print or download the intake information and prescription PDF for this order at any time.</p>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <button className="btn-secondary flex-1" onClick={() => {
+                      if (!selected) return
+                      setPrescriptionDraft({
+                        orderId: selected.id,
+                        patientName: selected.patient.user.name,
+                        patientDob: selected.patient.dateOfBirth ?? 'Not on file',
+                        patientAddress: joinPatientAddress(selected.patient),
+                        providerName: selected.provider?.user?.name ?? 'Provider',
+                        providerAddress: '',
+                        providerPhone: selected.provider?.user?.phone ?? '',
+                        providerNpi: selected.provider?.npiNumber ?? '',
+                        medicationName: selected.orderMedications.length > 0
+                          ? selected.orderMedications.map((item) => item.medication.name).join(', ')
+                          : (selected.medication?.name ?? ''),
+                        directions: selected.orderMedications[0]?.medication.directions ?? selected.medication?.directions ?? '',
+                        quantity: selected.orderMedications[0]?.medication.quantity ?? selected.medication?.quantity ?? '',
+                        refills: '0',
+                        writtenDate: new Date().toISOString().slice(0, 10),
+                      })
+                    }}>
+                      Open Print / Download Documents
+                    </button>
+                  </div>
                 </div>
               )}
 
