@@ -7,7 +7,7 @@ export default function ResetPasswordPage() {
   const params = useSearchParams()
   const router = useRouter()
   const [email, setEmail] = useState(params.get('email') ?? '')
-  const [code, setCode] = useState('')
+  const [code, setCode] = useState(params.get('token') ?? '')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -57,7 +57,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="card w-full max-w-lg space-y-4">
         <h1 className="text-2xl font-bold">Reset Password</h1>
-        <p className="text-sm text-gray-500">Enter your email, the reset code, and your new password.</p>
+        <p className="text-sm text-gray-500">Enter your email, the reset link token, and your new password.</p>
 
         <div>
           <label className="label">Email</label>
@@ -65,8 +65,8 @@ export default function ResetPasswordPage() {
         </div>
 
         <div>
-          <label className="label">Reset Code</label>
-          <input className="input font-mono" value={code} onChange={(e) => setCode(e.target.value)} placeholder="6-digit code" />
+          <label className="label">Reset Token</label>
+          <input className="input font-mono" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Link token" />
         </div>
 
         <div>

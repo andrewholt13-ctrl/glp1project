@@ -11,22 +11,25 @@ export function buildPasswordResetEmail({
   to,
   resetCode,
   appName,
+  resetUrl,
 }: {
   to: string
   resetCode: string
   appName: string
+  resetUrl?: string
 }): PasswordResetEmail {
-  const subject = `${appName} password reset code`
-  const text = `Hello,\n\nWe received a request to reset your password for ${appName}.\n\nYour reset code is: ${resetCode}\n\nEnter this code on the password reset page to continue. If you did not request this, you can ignore this email.`
+  const subject = `${appName} password reset link`
+  const safeResetUrl = resetUrl ?? `https://butterhealth.com/reset-password?email=${encodeURIComponent(to)}`
+  const text = `Hello,\n\nWe received a request to reset your password for ${appName}.\n\nUse this secure link to continue: ${safeResetUrl}\n\nIf you did not request this, you can ignore this email.`
 
   const html = `
     <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #111827;">
       <h2 style="margin-bottom: 8px;">${appName}</h2>
       <p>Hello,</p>
       <p>We received a request to reset your password for ${appName}.</p>
-      <p>Your reset code is:</p>
-      <p style="font-size: 24px; font-weight: 700; letter-spacing: 0.2em; margin: 12px 0;">${resetCode}</p>
-      <p>Enter this code on the password reset page to continue. If you did not request this, you can ignore this email.</p>
+      <p>Use the secure link below to choose a new password:</p>
+      <p style="margin: 12px 0;"><a href="${safeResetUrl}" style="color: #2563eb;">Reset password</a></p>
+      <p>If you did not request this, you can ignore this email.</p>
     </div>
   `
 

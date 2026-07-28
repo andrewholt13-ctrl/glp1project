@@ -69,8 +69,9 @@ export async function POST(req: NextRequest) {
     })
 
     const appName = process.env.APP_NAME ?? 'Butter Health'
+    const resetUrl = `${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/reset-password?email=${encodeURIComponent(user.email)}&token=${code}`
     let delivered = false
-    let deliveryMessage = 'A reset code is ready. Use it to continue with password reset.'
+    let deliveryMessage = 'A reset link is ready. Use it to continue with password reset.'
 
     if (deliveryMethod === 'sms' && user.phone) {
       try {
@@ -95,6 +96,7 @@ export async function POST(req: NextRequest) {
         to: user.email,
         resetCode: code,
         appName,
+        resetUrl,
       })
 
       try {
@@ -105,7 +107,7 @@ export async function POST(req: NextRequest) {
 
       if (delivered) {
         logApiEvent('info', 'auth.forgot.email_sent', { requestId, userId: user.id, email: redactEmail(user.email) })
-        deliveryMessage = 'A reset code was sent to your email address.'
+        deliveryMessage = 'A reset link was sent to your email address.'
       } else {
         logApiEvent('info', 'auth.forgot.generated_dev_code', { requestId, userId: user.id })
       }
@@ -114,7 +116,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       resetCode: code,
-      message: delivered ? deliveryMessage : 'A reset code is ready. Use it to continue with password reset.',
+      message: delivered ? deliveryMessage : 'A reset link is ready. Open it on the next screen to continue—no paid provider is required.',
     })
   }
 
