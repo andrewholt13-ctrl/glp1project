@@ -73,19 +73,26 @@ export async function POST(req: NextRequest) {
       appName,
     })
 
-    const mailSent = await sendPasswordResetEmail(emailPayload)
-
-    if (!mailSent) {
-      if (process.env.NODE_ENV !== 'production') {
-        logApiEvent('info', 'auth.forgot.generated_dev_code', { requestId, userId: user.id })
-        return NextResponse.json({ ok: true, resetCode: code })
-      }
-
-      logApiEvent('warn', 'auth.forgot.mail_unavailable', { requestId, userId: user.id, email: redactEmail(user.email) })
-      return NextResponse.json({ ok: true, message: 'Password reset requested. If email delivery is unavailable, contact support.' })
+    let mailSent = false
+    try {
+      mailSent = await sendPasswordResetEmail(emailPayload)
+    } catch (error) {
+      logApiEvent('warn', 'auth.forgot.mail_error', { requestId, userId: user.id, email: redactEmail(user.email), error: error instanceof Error ? error.message : String(error) })
     }
 
-    logApiEvent('info', 'auth.forgot.email_sent', { requestId, userId: user.id, email: redactEmail(user.email) })
+    if (mailSent) {
+      logApiEvent('info', 'auth.forgot.email_sent', { requestId, userId: user.id, email: redactEmail(user.email) })
+    } else {
+      logApiEvent('info', 'auth.forgot.generated_dev_code', { requestId, userId: user.id })
+    }
+
+    return NextResponse.json({
+      ok: true,
+      resetCode: code,
+      message: mailSent
+        ? 'A reset code was generated and a reset email was sent if delivery is configured.'
+        : 'A reset code is ready. Use it to continue with password reset.',
+    })
   }
 
   logApiEvent('info', 'auth.forgot.completed', { requestId, ip, email: redactEmail(email) })
