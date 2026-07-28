@@ -15,6 +15,7 @@ import { prisma } from '@/lib/prisma'
 import { enforceRateLimit, getClientIp } from '@/lib/rateLimit'
 import { getRequestId, logApiEvent, redactEmail } from '@/lib/apiLogging'
 import { buildPasswordResetEmail, sendPasswordResetEmail } from '@/lib/email'
+import { sendPasswordResetSms } from '@/lib/notifications'
 
 function hashResetCode(code: string) {
   return createHash('sha256').update(code).digest('hex')
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => null)
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
+  const deliveryMethod = typeof body?.deliveryMethod === 'string' ? body.deliveryMethod : 'email'
 
   if (!email) {
     logApiEvent('warn', 'auth.forgot.invalid_request', { requestId, ip })
@@ -67,31 +69,52 @@ export async function POST(req: NextRequest) {
     })
 
     const appName = process.env.APP_NAME ?? 'Butter Health'
-    const emailPayload = buildPasswordResetEmail({
-      to: user.email,
-      resetCode: code,
-      appName,
-    })
+    let delivered = false
+    let deliveryMessage = 'A reset code is ready. Use it to continue with password reset.'
 
-    let mailSent = false
-    try {
-      mailSent = await sendPasswordResetEmail(emailPayload)
-    } catch (error) {
-      logApiEvent('warn', 'auth.forgot.mail_error', { requestId, userId: user.id, email: redactEmail(user.email), error: error instanceof Error ? error.message : String(error) })
-    }
+    if (deliveryMethod === 'sms' && user.phone) {
+      try {
+        delivered = await sendPasswordResetSms({
+          phone: user.phone,
+          resetCode: code,
+          appName,
+          firstName: user.name?.split(' ')[0] ?? undefined,
+        })
+      } catch (error) {
+        logApiEvent('warn', 'auth.forgot.sms_error', { requestId, userId: user.id, phone: user.phone, error: error instanceof Error ? error.message : String(error) })
+      }
 
-    if (mailSent) {
-      logApiEvent('info', 'auth.forgot.email_sent', { requestId, userId: user.id, email: redactEmail(user.email) })
+      if (delivered) {
+        logApiEvent('info', 'auth.forgot.sms_sent', { requestId, userId: user.id, phone: user.phone })
+        deliveryMessage = 'A reset code was sent to your phone number.'
+      } else {
+        logApiEvent('info', 'auth.forgot.generated_dev_code', { requestId, userId: user.id })
+      }
     } else {
-      logApiEvent('info', 'auth.forgot.generated_dev_code', { requestId, userId: user.id })
+      const emailPayload = buildPasswordResetEmail({
+        to: user.email,
+        resetCode: code,
+        appName,
+      })
+
+      try {
+        delivered = await sendPasswordResetEmail(emailPayload)
+      } catch (error) {
+        logApiEvent('warn', 'auth.forgot.mail_error', { requestId, userId: user.id, email: redactEmail(user.email), error: error instanceof Error ? error.message : String(error) })
+      }
+
+      if (delivered) {
+        logApiEvent('info', 'auth.forgot.email_sent', { requestId, userId: user.id, email: redactEmail(user.email) })
+        deliveryMessage = 'A reset code was sent to your email address.'
+      } else {
+        logApiEvent('info', 'auth.forgot.generated_dev_code', { requestId, userId: user.id })
+      }
     }
 
     return NextResponse.json({
       ok: true,
       resetCode: code,
-      message: mailSent
-        ? 'A reset code was generated and a reset email was sent if delivery is configured.'
-        : 'A reset code is ready. Use it to continue with password reset.',
+      message: delivered ? deliveryMessage : 'A reset code is ready. Use it to continue with password reset.',
     })
   }
 

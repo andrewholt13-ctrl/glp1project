@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildPasswordResetEmail } from './email'
+import { buildPasswordResetEmail } from './email.ts'
 
 test('builds a password reset email with the reset code', () => {
   const email = buildPasswordResetEmail({

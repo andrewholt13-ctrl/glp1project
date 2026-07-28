@@ -6,6 +6,57 @@ function normalizePhone(phone: string) {
   return ''
 }
 
+export function buildPasswordResetSmsBody({
+  resetCode,
+  appName,
+  firstName,
+}: {
+  resetCode: string
+  appName: string
+  firstName?: string
+}) {
+  const safeName = firstName?.trim() || 'there'
+  return `Hi ${safeName}, your ${appName} password reset code is ${resetCode}. Enter this code on the reset page to continue.`
+}
+
+export async function sendPasswordResetSms({
+  phone,
+  resetCode,
+  appName,
+  firstName,
+}: {
+  phone: string
+  resetCode: string
+  appName: string
+  firstName?: string
+}) {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID
+  const authToken = process.env.TWILIO_AUTH_TOKEN
+  const fromNumber = process.env.TWILIO_FROM_NUMBER
+
+  if (!accountSid || !authToken || !fromNumber) return false
+
+  const to = normalizePhone(phone)
+  if (!to) return false
+
+  const payload = new URLSearchParams({
+    To: to,
+    From: fromNumber,
+    Body: buildPasswordResetSmsBody({ resetCode, appName, firstName }),
+  })
+
+  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: payload,
+  })
+
+  return response.ok
+}
+
 export async function sendPaymentRequiredSms({
   phone,
   firstName,

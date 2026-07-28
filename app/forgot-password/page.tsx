@@ -10,6 +10,7 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [resetCode, setResetCode] = useState('')
+  const [deliveryMethod, setDeliveryMethod] = useState<'email' | 'sms'>('email')
 
   async function submit() {
     if (!email.trim()) {
@@ -24,7 +25,7 @@ export default function ForgotPasswordPage() {
     const res = await fetch('/api/auth/forgot-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, deliveryMethod }),
     })
 
     const text = await res.text()
@@ -55,6 +56,18 @@ export default function ForgotPasswordPage() {
         <div>
           <label className="label">Email</label>
           <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+
+        <div>
+          <label className="label">Delivery method</label>
+          <div className="flex gap-2">
+            <button type="button" className={`btn-secondary flex-1 ${deliveryMethod === 'email' ? 'ring-2 ring-slate-400' : ''}`} onClick={() => setDeliveryMethod('email')}>
+              Email
+            </button>
+            <button type="button" className={`btn-secondary flex-1 ${deliveryMethod === 'sms' ? 'ring-2 ring-slate-400' : ''}`} onClick={() => setDeliveryMethod('sms')}>
+              Text message
+            </button>
+          </div>
         </div>
 
         {message && <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-200">{message}</div>}
